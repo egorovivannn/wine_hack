@@ -1,0 +1,19 @@
+{
+  "settings_version": "0.0.8",
+  "datasets_dir": "/home/ivan/datasets",
+  "weights_dir": "/home/ivan/weights",
+  "runs_dir": "/home/ivan/runs",
+  "uuid": "9e6dc606f77a9b5af96b2e296ad90cae6f5d489bf50a89214969ef36e0006265",
+  "sync": true,
+  "api_key": "",
+  "openai_api_key": "",
+  "clearml": true,
+  "comet": true,
+  "dvc": true,
+  "mlflow": true,
+  "raytune": true,
+  "tensorboard": false,
+  "wandb": false,
+  "vscode_msg": true,
+  "openvino_msg": true
+}

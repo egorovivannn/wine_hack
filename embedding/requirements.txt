@@ -1,0 +1,11 @@
+# Tested package versions; current environment already has these.
+# Install the appropriate CUDA build of torch/torchvision for your host.
+torch==2.6.0
+torchvision==0.21.0
+transformers==4.57.1
+ultralytics==8.3.227
+numpy==1.26.4
+pandas==2.2.2
+Pillow==12.3.0
+matplotlib==3.9.2
+safetensors==0.6.2
