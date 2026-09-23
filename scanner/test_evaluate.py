@@ -4,7 +4,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from .evaluate import read_labels
+from .labels import read_labels
 
 
 class ManualLabelTests(unittest.TestCase):

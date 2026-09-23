@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import csv
-from dataclasses import dataclass
 import json
 import os
 from pathlib import Path
@@ -17,37 +15,10 @@ import torch
 import transformers
 
 from .catalog import ROOT, sha256_file
+from .labels import read_labels
 from .server import SearchEngine
 from .ocr import MODEL_DIR as DEFAULT_OCR_MODEL_DIR, MODEL_SHA256 as OCR_MODEL_SHA256
 from .vision import DEFAULT_INDEX, DEFAULT_MANIFEST, DEFAULT_MODEL_DIR
-
-
-@dataclass(frozen=True)
-class ManualLabel:
-    image_sha256: str
-    status: str
-    slug: str
-    evidence: str
-
-
-def read_labels(path: Path | None) -> dict[str, ManualLabel]:
-    if path is None:
-        return {}
-    with path.open(newline="", encoding="utf-8") as stream:
-        reader = csv.DictReader(stream, delimiter="\t")
-        if reader.fieldnames != ["image_path", "image_sha256", "status", "slug", "evidence"]:
-            raise ValueError("Labels need image_path, image_sha256, status, slug, evidence columns")
-        labels = {}
-        for row in reader:
-            name = row["image_path"]
-            status = row["status"]
-            if (not name or name in labels or len(row["image_sha256"] or "") != 64 or
-                    status not in {"verified", "unknown", "ambiguous"} or
-                    bool(row["slug"]) != (status == "verified") or
-                    not row["evidence"]):
-                raise ValueError(f"Invalid or duplicate label: {name}")
-            labels[name] = ManualLabel(row["image_sha256"], status, row["slug"], row["evidence"])
-    return labels
 
 
 def evaluate(images_dir: Path, output: Path, labels_path: Path | None,

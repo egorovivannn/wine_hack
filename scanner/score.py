@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 
 from .catalog import sha256_file
-from .evaluate import read_labels
+from .labels import read_labels
 
 
 def score_predictions(predictions_path: Path, labels_path: Path) -> dict:
