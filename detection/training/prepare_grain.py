@@ -6,6 +6,7 @@ import argparse
 from collections import Counter, defaultdict
 import hashlib
 import json
+import os
 from pathlib import Path, PurePosixPath
 import random
 import re
@@ -47,12 +48,21 @@ def main() -> None:
     p.add_argument("--output", type=Path, default=Path("data/external/grain/yolo"))
     p.add_argument("--max-side", type=int, default=1280)
     p.add_argument("--seed", type=int, default=42)
+    p.add_argument("--reuse", type=Path, help="Reuse validated resized images from a previous preparation")
     args = p.parse_args()
     if digest(args.archive, "md5") != EXPECTED_MD5:
         p.error("GRAIN archive MD5 mismatch")
     if args.output.exists():
         p.error("Output already exists; choose another directory")
     records = []
+    previous = None
+    if args.reuse:
+        previous_provenance = json.loads((args.reuse / "provenance.json").read_text())
+        if previous_provenance["archive_md5"] != EXPECTED_MD5 or previous_provenance["max_side"] != args.max_side:
+            p.error("Reused images were prepared from different source/settings")
+        if digest(args.reuse / "manifest.jsonl", "sha256") != previous_provenance["manifest_sha256"]:
+            p.error("Reused split manifest changed")
+        previous = [json.loads(line) for line in (args.reuse / "manifest.jsonl").read_text().splitlines()]
     with ZipFile(args.archive) as z:
         names = set(z.namelist())
         if any(PurePosixPath(n).is_absolute() or ".." in PurePosixPath(n).parts for n in names):
@@ -71,7 +81,7 @@ def main() -> None:
                     raise FileNotFoundError(source)
                 records.append(dict(source=source, lighting=lighting, image=image,
                                     boxes=by_image[image["id"]],
-                                    session=lighting + ":" + session(image["file_name"])))
+                                    session=session(image["file_name"])))
         groups = defaultdict(list)
         for row in records:
             groups[row["session"]].append(row)
@@ -93,30 +103,40 @@ def main() -> None:
             raise ValueError(f"Empty split: {sizes}")
         args.output.mkdir(parents=True)
         manifest = []
-        for index, row in enumerate(sorted(records, key=lambda r: r["source"])):
+        ordered = sorted(records, key=lambda r: r["source"])
+        if previous and [r["source"] for r in previous] != [r["source"] for r in ordered]:
+            p.error("Reused source ordering differs")
+        for index, row in enumerate(ordered):
             split = assignments[row["session"]]
             image_path = args.output / "images" / split / f"{index:05d}.jpg"
             label_path = args.output / "labels" / split / f"{index:05d}.txt"
             image_path.parent.mkdir(parents=True, exist_ok=True)
             label_path.parent.mkdir(parents=True, exist_ok=True)
-            with z.open(row["source"]) as stream:
-                im = ImageOps.exif_transpose(Image.open(stream)).convert("RGB")
-                im.load()
-            w, h = im.size
-            if (w, h) != (row["image"]["width"], row["image"]["height"]):
-                raise ValueError(f"Annotation/image dimensions disagree: {row['source']}")
-            im.thumbnail((args.max_side, args.max_side), Image.Resampling.LANCZOS)
-            im.save(image_path, quality=90)
-            labels = []
-            for x, y, bw, bh in row["boxes"]:
-                x1, y1 = max(0, x), max(0, y)
-                x2, y2 = min(w, x + bw), min(h, y + bh)
-                if x2 <= x1 or y2 <= y1:
-                    continue
-                labels.append(f"0 {(x1+x2)/(2*w):.7f} {(y1+y2)/(2*h):.7f} {(x2-x1)/w:.7f} {(y2-y1)/h:.7f}")
-            label_path.write_text("\n".join(labels) + ("\n" if labels else ""))
+            if previous:
+                old_split = previous[index]["split"]
+                os.link(args.reuse / "images" / old_split / image_path.name, image_path)
+                os.link(args.reuse / "labels" / old_split / label_path.name, label_path)
+                label_count = previous[index]["boxes"]
+            else:
+                with z.open(row["source"]) as stream:
+                    im = ImageOps.exif_transpose(Image.open(stream)).convert("RGB")
+                    im.load()
+                w, h = im.size
+                if (w, h) != (row["image"]["width"], row["image"]["height"]):
+                    raise ValueError(f"Annotation/image dimensions disagree: {row['source']}")
+                im.thumbnail((args.max_side, args.max_side), Image.Resampling.LANCZOS)
+                im.save(image_path, quality=90)
+                labels = []
+                for x, y, bw, bh in row["boxes"]:
+                    x1, y1 = max(0, x), max(0, y)
+                    x2, y2 = min(w, x + bw), min(h, y + bh)
+                    if x2 <= x1 or y2 <= y1:
+                        continue
+                    labels.append(f"0 {(x1+x2)/(2*w):.7f} {(y1+y2)/(2*h):.7f} {(x2-x1)/w:.7f} {(y2-y1)/h:.7f}")
+                label_path.write_text("\n".join(labels) + ("\n" if labels else ""))
+                label_count = len(labels)
             manifest.append(dict(source=row["source"], session=row["session"],
-                                 split=split, boxes=len(labels)))
+                                 split=split, boxes=label_count))
     yaml_path = args.output / "data.yaml"
     yaml_path.write_text(yaml.safe_dump(dict(path=str(args.output.resolve()),
         train="images/train", val="images/val", test="images/test",
