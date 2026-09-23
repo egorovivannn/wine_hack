@@ -9,6 +9,7 @@ Build a reproducible local service that identifies the correct `slug` from a rea
 - `df_2.csv` is a derived catalog table. `slug` identifies a wine card; repeated rows do not create new classes. Do not infer the correct wine from query filenames, file order, or the numeric prefixes of the official photo archive.
 - Raw inputs live in the ignored `data/` directory: `data/source/Датасет.zip`, `data/source/official_real_photos.zip`, and `data/field/real_photos.zip`. The latter contains our own store photos and prior detector outputs. Check actual contents before use.
 - The official photo archive has no published ground-truth `slug` table. Treat it as unlabeled until identities are verified. Keep manual labels, their evidence, and an explicit unknown/ambiguous state in a separate manifest.
+- For the 13 store photos in `data/field/photos`, the user specified the central bottle as the target. `evaluation/field_center_labels.tsv` records the reviewed cases; do not invent an exact catalog `slug` for an absent wine or choose between two bottles at the frame center.
 - Verify each `slug -> reference image` join. Strapi filenames differ from the original CSV names and some matches are ambiguous. Never choose the first fuzzy filename match silently.
 - Keep raw archives, extracted photos, model weights, caches, and personal photos out of Git. Commit code, small manifests with provenance, and aggregate reports only. Never commit passwords or API keys.
 
