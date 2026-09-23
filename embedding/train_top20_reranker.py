@@ -43,8 +43,10 @@ def orb_features(a, b, matcher):
 
 def build_examples(frame, base, head, split, descriptors):
     ids = np.flatnonzero(frame.split.to_numpy() == split)
+    permitted = {"train"} if split == "train" else {"train", "val"} if split == "val" else {"train", "val", "test"}
+    pool = np.flatnonzero(frame.split.isin(permitted).to_numpy())
     labels = frame.vintage_id.to_numpy()
-    gallery = np.array([ids[np.flatnonzero(labels[ids] == cls)[0]] for cls in sorted(set(labels[ids]))])
+    gallery = np.array([pool[np.flatnonzero(labels[pool] == cls)[0]] for cls in sorted(set(labels[pool]))])
     queries = np.setdiff1d(ids, gallery)
     matcher = cv2.BFMatcher(cv2.NORM_HAMMING)
     examples = []
@@ -71,9 +73,9 @@ def metrics(examples, scorer):
     failures = []
     for values, truth, filename, label in examples:
         ranks = np.argsort(-scorer(values), kind="stable")
-        top1 += truth >= 0 and ranks[0] == truth
-        top5 += truth >= 0 and truth in ranks[:5]
-        hit20 += truth >= 0
+        top1 += bool(truth >= 0 and ranks[0] == truth)
+        top5 += bool(truth >= 0 and truth in ranks[:5])
+        hit20 += bool(truth >= 0)
         if truth < 0 or ranks[0] != truth:
             failures.append(dict(image=filename, vintage_id=label, truth_candidate=truth,
                                  predicted_candidate=int(ranks[0])))

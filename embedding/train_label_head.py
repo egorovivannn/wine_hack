@@ -78,8 +78,10 @@ def features(manifest_path, model_dir, cache_path, batch):
 @torch.no_grad()
 def retrieval(model, frame, x, split):
     ids = np.flatnonzero(frame.split.to_numpy() == split)
-    classes = frame.vintage_id.to_numpy()[ids]
-    gallery = np.array([ids[np.flatnonzero(classes == cls)[0]] for cls in sorted(set(classes))])
+    permitted = {"train"} if split == "train" else {"train", "val"} if split == "val" else {"train", "val", "test"}
+    pool = np.flatnonzero(frame.split.isin(permitted).to_numpy())
+    labels = frame.vintage_id.to_numpy()
+    gallery = np.array([pool[np.flatnonzero(labels[pool] == cls)[0]] for cls in sorted(set(labels[pool]))])
     queries = np.setdiff1d(ids, gallery)
     if not len(queries):
         raise ValueError(f"No positive pairs in {split}")
