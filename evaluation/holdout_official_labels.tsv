@@ -1,0 +1,24 @@
+image_path	image_sha256	status	slug	evidence
+1.73_06-09-2026_14-54-06.webp	367a651c8018b48820700f92c18e1b6cb2c4aedeb1f47cc799516d50016686b8	unknown		На этикетке Фанагория «ЛЕ КИФ»; такой позиции в df_2.csv нет.
+70.45_04-09-2026_13-35-37.webp	3eb309e8e4b139ef15566a45fe8fef1a940b8dca4bf15d8a6b5fe0523a69cb52	ambiguous		На этикетке «Формула Q», но сорт неразборчив; в каталоге два разных сорта.
+72.97_09-09-2026_19-38-57.webp	a044e6b41dad8e9de1da1f0d3250ebb3fa6504c57fac1c19599c6e6a58985c9f	unknown		На бутылках Chateau Pinot «Беленькое»; такой позиции в df_2.csv нет.
+87.54_03-09-2026_13-27-53.webp	f8ca912b532eaea763d9a708344202736d0a3a356a597f65ca0d599183b2b16d	verified	relikta-relikta-sira-kaberne-fran-krasnoe-suhoe-13	На передней этикетке «Реликта», Сира Каберне Фран.
+87.81_09-09-2026_17-16-36.webp	e4839a440c4741671a2497060bab320e54703d37ff0af208991278bf699632d9	unknown		На этикетке AYA Purity in Balance 2025; такой позиции в df_2.csv нет.
+94.02_24-08-2026_17-46-57.webp	003d87255c17e2188c36bc6a42f63505740d8f45db6ea6fb91dd4c078e05b101	verified	rubin-golodrigi	На центральной этикетке Табия «Рубин Голодриги».
+94.7_25-08-2026_15-52-07.webp	21d0d5fd419192919231da52f4c32bedd785a5320adde9c1c739f5f6cd967aeb	unknown		На этикетке Жемчужная 9 «Цитрон, Совиньон Блан»; такой пары в карточках АРАТТИ нет.
+94.8_01-09-2026_10-10-02.webp	eeb9e670cfc73d731be98ec65ddf3ac31de8f456b2fc9e6651bf3f38191790a0	unknown		На бутылках Mozgauri «Алазанская долина»; точной карточки в df_2.csv нет.
+95.03_04-09-2026_11-39-35.webp	9269752db5d672742b98f33f9d8198519ca823edf3f88c883288bcc442658971	verified	fanagoriya-zelyonoe-vino-risling-tsitronnyy-magaracha-beloe-polusuhoe-11	На передней этикетке Фанагория «Зелёное вино», Рислинг Цитронный Магарача.
+95.07_01-09-2026_16-15-35.webp	22117738bbb30cda0a92655a03d4514c52bd77a3b17f827480e8895e0e1237a9	unknown		На этикетке Khrustaleva 76 Extra Brut Pinot Gris; в каталоге такой позиции нет.
+95.17_29-08-2026_11-06-42.webp	3592273a67c50b354728e8fb90d9515bfccd2f7cb63cf502a925ed078ed1df49	unknown		На этикетке Golubitskoe Estate Pinot Noir; отдельной карточки Pinot Noir в df_2.csv нет.
+95.63_24-08-2026_17-47-43.webp	991c7fdf7ecc8c5ed3c3c2b02f29b9d03cb7b5a9a378cce050a1678c0db8a616	verified	rubin-golodrigi	На центральной этикетке Табия «Рубин Голодриги».
+95.76_23-08-2026_18-19-43.webp	36cb48ee1a77914eaa7faf800515661768b6965c1326ae83d0fc89615435edee	verified	denisov_barynya_kurmyshi	На передней этикетке DENISOV «Барыня Курмыши».
+96.31_09-09-2026_19-29-01.webp	2773e71ae7a1953b0a72e816253792c32fbd6d9e16fbb024d896228c04590048	ambiguous		На этикетке АРАТТИ «Каберне по-белому»; в каталоге две карточки с этим названием, вариант не установлен.
+96.3_08-09-2026_10-53-14.webp	5b94c7ad65218e0a4a525795cc9ac1773b3b2c161ea2fcd1644f89327174b076	verified	fanagoriya-ona-skazala-da-beloe-polusladkoe	На центральной этикетке Фанагория «Она сказала Да!», белое.
+96.53_03-09-2026_16-39-17.webp	19b31d0ea1612c19020022c4f55b04d3456329682b5004e157e206518644cc4b	unknown		На этикетке Фанагория RS White; в каталоге есть RS Noir, но нет RS White.
+96.54_04-09-2026_19-30-52.webp	dc3cae13dfec9951ba10019f1ba4f85657264a9e91721b37b2e8966c10f9eb79	verified	denisov-winery-risling-beloe-suhoe-115	На передней этикетке DENISOV «Рислинг».
+96.55_30-08-2026_19-34-31.webp	22d1d1b7cf2dc2343aa665670468b199f6b13c0dc4abb94d532434dc9c2245e5	ambiguous		На передней этикетке «Новый Свет», 2023, розовое полусладкое; точный вариант среди нескольких карточек не установлен.
+96.64_26-08-2026_16-52-37.webp	5e8895addff6d97034c161e4123c487525e444f2e6c458ae80dd5d17cbd8e94d	ambiguous		На этикетке Валерий Захарьин «Бастардо Кефесия»; в каталоге две отдельные карточки с этим названием.
+96.77_24-08-2026_14-10-46.webp	91ea9bff5395b030b7fc53a58058ec5d9f21c6f48620c860820c03bda08eaff6	unknown		На центральной этикетке Golubitskoe Estate Winemaker Selection Red Blend; такой карточки нет.
+96.78_25-08-2026_18-04-42.webp	a865a763586b38f9aa98443a53d09a853db2a8fe06ae7133408531819928c5e8	ambiguous		В центре две бутылки Табия с разными названиями — Рубин Голодриги и Бастардо.
+96.8_25-08-2026_22-20-38.webp	1bb8b68cecd621b377b75df193988127526fe804945eb856eeb09c23dad0152b	unknown		На передней этикетке семейной винодельни Литавщуков «Совиньон Блан»; такой карточки в df_2.csv нет.
+97.02_29-08-2026_18-49-02.webp	ec0c92ffc08ca3953f15944cefc46b9d56ccea425584072377350232ca78c9f9	unknown		На передней этикетке Массандра «Саперави» 2025; точной карточки в df_2.csv нет.
