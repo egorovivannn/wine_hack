@@ -467,3 +467,9 @@ junit/
 *.pt
 *model/
 *safetensors
+
+# Local hackathon inputs and generated inference artifacts
+/data/
+/competition_labels_embeddings.json
+/predictions.jsonl
+/df_2_bboxes.json
