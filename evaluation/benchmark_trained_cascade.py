@@ -17,7 +17,7 @@ import torch
 from ultralytics import YOLO
 
 from embedding.train_label_head import LabelHead, sha256
-from embedding.train_top20_reranker import orb_features
+from embedding.train_top20_reranker import FEATURES, orb_features
 from scanner.catalog import ROOT
 from scanner.image import decode_image, query_views, reference_views
 from scanner.labels import read_labels
@@ -81,12 +81,16 @@ def main():
     encoder = VisionEncoder(args.model_dir)
     gallery = load_index(args.index, args.manifest)
     head_state = torch.load(args.head, map_location="cpu", weights_only=False)
+    if head_state["fingerprint"]["base_weights_sha256"] != sha256(args.model_dir / "model.safetensors"):
+        raise ValueError("Embedding head/base model mismatch")
     head = LabelHead(**head_state["config"])
     head.load_state_dict(head_state["state_dict"])
     head.eval()
     rerank_state = torch.load(args.reranker, map_location="cpu", weights_only=False)
     if rerank_state["head_sha256"] != sha256(args.head):
         raise ValueError("Reranker/head checkpoint mismatch")
+    if rerank_state["feature_names"] != FEATURES:
+        raise ValueError("Reranker feature schema mismatch")
     weights = rerank_state["state_dict"]["weight"].numpy().ravel()
     mean, std = rerank_state["mean"], rerank_state["std"]
     bias = float(rerank_state["state_dict"]["bias"].item())
@@ -116,6 +120,7 @@ def main():
         base_scores = .35*full_scores + .65*label_scores
         order = np.argsort(-base_scores, kind="stable")[:20]
         visual_slugs = [slug for i in order for slug in gallery.image_slugs[i]][:5]
+        candidate_slugs = [slug for i in order for slug in gallery.image_slugs[i]]
         head_scores = .35*(projected_refs[:, 0] @ projected_query[0]) + .65*(projected_refs[:, 1] @ projected_query[1])
         head_order = sorted(order, key=lambda i: -head_scores[i])
         head_slugs = [slug for i in head_order for slug in gallery.image_slugs[i]][:5]
@@ -136,6 +141,7 @@ def main():
                          label_status=labels[path.name].status,
                          predicted_slug=ranked[0], top5_slugs=ranked[:5],
                          detector_boxes=detections, detector_fallback=detections == 0,
+                         candidate_slugs=candidate_slugs,
                          visual_top5_slugs=visual_slugs, head_top5_slugs=head_slugs,
                          latency_ms=round((time.perf_counter()-start)*1000)))
         if number % 10 == 0 or number == len(paths):
@@ -154,6 +160,8 @@ def main():
                   cascade=score_rows(rows, labels),
                   p50_ms=float(np.percentile(latencies, 50)), p95_ms=float(np.percentile(latencies, 95)),
                   detector_fallbacks=sum(r["detector_fallback"] for r in rows),
+                  candidate_hit20=sum(labels[r["image_path"]].slug in r["candidate_slugs"] for r in rows
+                                      if labels[r["image_path"]].status == "verified"),
                   checkpoint_sha256={"detector": sha256(args.detector), "head": sha256(args.head),
                                      "reranker": sha256(args.reranker)},
                   index_sha256=sha256(args.index), catalog_manifest_sha256=sha256(args.manifest),
@@ -162,7 +170,8 @@ def main():
                   git_revision=subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip(),
                   gpu=torch.cuda.get_device_name(0) if torch.cuda.is_available() else None,
                   python=platform.python_version(), errors=[dict(image=r["image_path"], truth=labels[r["image_path"]].slug,
-                         predicted=r["predicted_slug"], baseline=baseline_by_name[r["image_path"]]["predicted_slug"])
+                         predicted=r["predicted_slug"], baseline=baseline_by_name[r["image_path"]]["predicted_slug"],
+                         candidate_present=labels[r["image_path"]].slug in r["candidate_slugs"])
                          for r in rows if labels[r["image_path"]].status == "verified" and r["predicted_slug"] != labels[r["image_path"]].slug])
     args.output.with_suffix(".summary.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n")
     print(json.dumps({k: v for k, v in report.items() if k != "errors"}, ensure_ascii=False, indent=2))
