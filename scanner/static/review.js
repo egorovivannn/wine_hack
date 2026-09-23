@@ -112,6 +112,7 @@ function renderReference(candidate, verifiedOnly = false) {
     ["slug", verifiedOnly ? detail.slug : candidate.slug],
     ["Ранг", verifiedOnly ? "вне Top-20" : `${candidate.rank} / 20`],
     ["Сходство", verifiedOnly ? "—" : score(candidate.score)],
+    ["Отставание от #1", verifiedOnly ? "—" : score(candidate.gap_to_first)],
     ["Категория", card?.category], ["Сорт", card?.grape], ["Регион", card?.region],
     ["Цвет", card?.color], ["Описание", card?.description],
     ["Эталон SHA", verifiedOnly ? "см. каталог" : shortHash(candidate.reference_sha256)],
@@ -139,7 +140,8 @@ function renderCandidates() {
     const copy = node("div", "candidate-copy");
     copy.append(node("div", "candidate-name", candidate.card.name),
                 node("div", "candidate-winery", candidate.card.winery),
-                node("div", "candidate-score mono", score(candidate.score)));
+                node("div", "candidate-score mono", score(candidate.score)),
+                node("div", "candidate-gap mono", `Δ ${score(candidate.gap_to_first)}`));
     if (isMatch) copy.append(node("div", "candidate-match", "✓ Подтверждённая карточка"));
     button.append(imageBox, copy);
     button.addEventListener("click", () => {
@@ -157,6 +159,9 @@ function renderDetail() {
   $("decisionStatus").className = `badge ${detail.status}`;
   $("decisionStatus").textContent = statusText[detail.status];
   $("decisionText").textContent = detail.status === "verified" ? detail.slug : detail.evidence;
+  $("scoreTop1").textContent = score(detail.top1.score);
+  $("scoreGap").textContent = score(detail.gap_first_second);
+  $("scoreSpread").textContent = score(detail.spread_top20);
   $("photoImage").src = detail.photo_url;
   $("originalLink").href = detail.photo_url;
   $("photoHash").textContent = `SHA-256 ${shortHash(detail.sha256)}`;
@@ -165,6 +170,8 @@ function renderDetail() {
     ["Статус", statusText[detail.status]], ["slug", detail.slug],
     ["Место в Top-20", detail.slug ? detail.verified_rank || "вне Top-20" : "—"],
     ["Top-1", detail.top1.slug], ["Балл Top-1", score(detail.top1.score)],
+    ["Отрыв #1–#2", score(detail.gap_first_second)],
+    ["Разброс Top-20", score(detail.spread_top20)],
     ["Фото SHA-256", detail.sha256],
   ]);
   const lines = $("ocrLines");

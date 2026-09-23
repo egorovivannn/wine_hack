@@ -35,6 +35,12 @@
           <div class="detail-actions"><button id="prevButton" type="button" aria-label="Предыдущее фото">←</button><button id="nextButton" type="button" aria-label="Следующее фото">→</button></div>
         </div>
         <div class="decision-bar"><span id="decisionStatus" class="badge"></span><span id="decisionText"></span></div>
+        <div class="score-insights" aria-label="Как читать баллы сходства">
+          <div class="score-metric"><span>TOP-1</span><strong id="scoreTop1" class="mono"></strong></div>
+          <div class="score-metric"><span>ОТРЫВ ОТ #2</span><strong id="scoreGap" class="mono"></strong></div>
+          <div class="score-metric"><span>РАЗБРОС TOP-20</span><strong id="scoreSpread" class="mono"></strong></div>
+          <p>Балл — взвешенное косинусное сходство (весь кадр 35%, центр 65%), а не вероятность. Смотрите на отрыв и признаки этикетки; высокий балл бывает и у вина без карточки.</p>
+        </div>
         <div class="compare-grid">
           <section class="image-panel"><div class="panel-title"><span>ИСХОДНОЕ ФОТО</span><a id="originalLink" target="_blank" rel="noopener">Открыть оригинал ↗</a></div><div class="image-stage"><img id="photoImage" alt="Исходное фото целевой бутылки"></div><div class="image-foot"><span id="photoHash" class="mono"></span></div></section>
           <section class="image-panel"><div class="panel-title"><span id="referenceHeading">ЭТАЛОН КАТАЛОГА</span><a id="referenceLink" target="_blank" rel="noopener">Открыть эталон ↗</a></div><div class="image-stage reference-stage"><img id="referenceImage" alt="Эталон выбранной карточки"><div id="noReference" class="empty-reference" hidden>Выберите кандидата из Top-20</div></div><div class="image-foot"><span id="referenceCaption"></span><span id="referenceScore" class="mono"></span></div></section>
@@ -44,7 +50,7 @@
           <section class="info-card"><div class="section-label">ВЫБРАННЫЙ КАНДИДАТ</div><h3 id="candidateName"></h3><p id="candidateWinery" class="muted"></p><dl id="candidateMeta" class="meta-list"></dl></section>
         </div>
         <section class="ocr-card"><div class="section-label">OCR · РАСПОЗНАННЫЙ ТЕКСТ <span id="ocrCount"></span></div><div id="ocrLines" class="ocr-lines"></div><p class="hint">OCR может ошибаться. Текст показан для анализа и не считается подтверждением метки.</p></section>
-        <section class="candidates-section"><div class="candidates-heading"><div><div class="eyebrow">ВИЗУАЛЬНЫЙ ПОИСК</div><h2>20 ближайших эталонов</h2></div><span id="rankNote" class="rank-note"></span></div><div id="candidateGrid" class="candidate-grid"></div></section>
+        <section class="candidates-section"><div class="candidates-heading"><div><div class="eyebrow">ВИЗУАЛЬНЫЙ ПОИСК</div><h2>20 ближайших эталонов</h2><p class="score-explainer">Показаны исходный балл и отставание от лидера: чем меньше Δ, тем ближе кандидаты.</p></div><span id="rankNote" class="rank-note"></span></div><div id="candidateGrid" class="candidate-grid"></div></section>
         <section class="provenance"><details><summary>Происхождение данных и ограничения</summary><p>Метки присвоены вручную после просмотра Top-20; это материал для анализа, а не независимый тест точности. Балл — визуальное сходство, не вероятность правильного ответа.</p><dl id="provenanceHashes" class="meta-list mono"></dl></details></section>
       </div>
     </main>

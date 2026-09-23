@@ -99,6 +99,8 @@ class ReviewData:
             "top1": {"slug": candidates[0]["slug"], "score": candidates[0]["score"],
                      "name": candidates[0]["name"], "winery": candidates[0]["winery"]},
             "verified_rank": match_rank,
+            "gap_first_second": round(candidates[0]["score"] - candidates[1]["score"], 4),
+            "spread_top20": round(candidates[0]["score"] - candidates[-1]["score"], 4),
             "photo_url": f"/media/photos/{name}",
             "thumb_url": f"/media/thumbs/{name}",
         }
@@ -115,6 +117,7 @@ class ReviewData:
             card = self.cards[item["slug"]]
             result["candidates"].append({
                 **item,
+                "gap_to_first": round(self.visual[name]["candidates"][0]["score"] - item["score"], 4),
                 "card": {key: card[key] for key in ("name", "winery", "category", "color", "region", "grape", "description")},
                 "reference_url": f"/media/references/{item['filename']}",
                 "reference_sha256": self.reference_hashes[item["filename"]],

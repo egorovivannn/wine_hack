@@ -8,7 +8,8 @@ import unittest
 
 from fastapi.testclient import TestClient
 
-from .review_app import create_app
+from .labels import ManualLabel
+from .review_app import ReviewData, create_app
 
 
 class FakeReviewData:
@@ -59,6 +60,28 @@ class ReviewAppTests(unittest.TestCase):
                 self.assertEqual(client.get("/").status_code, 200)
                 self.assertEqual(client.get("/review.js").status_code, 200)
                 self.assertEqual(client.get("/review.css").status_code, 200)
+
+
+    def test_score_gaps_keep_raw_scores_and_verified_rank(self) -> None:
+        data = ReviewData.__new__(ReviewData)
+        data.labels = {"one.webp": ManualLabel("a" * 64, "verified", "s2", "visible label")}
+        candidates = [{"rank": i + 1, "slug": f"s{i}", "filename": f"f{i}.webp",
+                       "score": round(0.84 - i * 0.001, 4), "name": f"wine {i}",
+                       "winery": "winery", "grape": "grape"} for i in range(20)]
+        data.visual = {"one.webp": {"candidates": candidates}}
+        data.ocr = {"one.webp": {"lines": []}}
+        data.cards = {f"s{i}": {"name": f"wine {i}", "winery": "winery",
+                       "category": "red", "color": "red", "region": "region",
+                       "grape": "grape", "description": "description", "image_name": f"f{i}.webp"}
+                      for i in range(20)}
+        data.reference_hashes = {f"f{i}.webp": "b" * 64 for i in range(20)}
+        data.allowed_references = set(data.reference_hashes)
+        summary = data.summary("one.webp")
+        self.assertEqual(summary["top1"]["score"], 0.84)
+        self.assertEqual(summary["gap_first_second"], 0.001)
+        self.assertEqual(summary["spread_top20"], 0.019)
+        self.assertEqual(summary["verified_rank"], 3)
+        self.assertEqual(data.detail("one.webp")["candidates"][2]["gap_to_first"], 0.002)
 
 
 if __name__ == "__main__":
