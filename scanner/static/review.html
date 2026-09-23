@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Винный архив — разбор фото</title>
+  <link rel="stylesheet" href="/review.css">
+  <script defer src="/review.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark">W.</span><span>Винный архив <small>РСХБ · разбор фото</small></span></div>
+    <div class="topbar-right"><span class="live-dot"></span><span>100 фото организаторов</span><span class="topbar-divider"></span><span id="datasetHash" class="mono subtle">загрузка…</span></div>
+  </header>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="sidebar-head">
+        <div class="eyebrow">РУЧНАЯ РАЗМЕТКА</div>
+        <h1>Коллекция фото</h1>
+        <p>Центральная бутылка каждого снимка, сопоставленная с каталогом.</p>
+      </div>
+      <div id="statusTabs" class="status-tabs" role="tablist" aria-label="Статус разметки"></div>
+      <label class="search-wrap"><span>Поиск по фото и карточкам</span><input id="search" type="search" placeholder="Название, винодельня, slug…" autocomplete="off"></label>
+      <div class="list-heading"><span>СНИМКИ</span><span id="resultCount">—</span></div>
+      <div id="photoList" class="photo-list" aria-live="polite"></div>
+      <div class="sidebar-foot">Ранжирование — визуальное Top-20 до OCR. Совпадение проверено вручную по этикетке и эталону.</div>
+    </aside>
+
+    <main id="main" class="main">
+      <div id="loading" class="loading">Загружаю разметку и эталоны…</div>
+      <div id="detail" hidden>
+        <div class="detail-head">
+          <div><div class="eyebrow">КАРТОЧКА СНИМКА <span id="position"></span></div><h2 id="photoTitle"></h2></div>
+          <div class="detail-actions"><button id="prevButton" type="button" aria-label="Предыдущее фото">←</button><button id="nextButton" type="button" aria-label="Следующее фото">→</button></div>
+        </div>
+        <div class="decision-bar"><span id="decisionStatus" class="badge"></span><span id="decisionText"></span></div>
+        <div class="compare-grid">
+          <section class="image-panel"><div class="panel-title"><span>ИСХОДНОЕ ФОТО</span><a id="originalLink" target="_blank" rel="noopener">Открыть оригинал ↗</a></div><div class="image-stage"><img id="photoImage" alt="Исходное фото целевой бутылки"></div><div class="image-foot"><span id="photoHash" class="mono"></span></div></section>
+          <section class="image-panel"><div class="panel-title"><span id="referenceHeading">ЭТАЛОН КАТАЛОГА</span><a id="referenceLink" target="_blank" rel="noopener">Открыть эталон ↗</a></div><div class="image-stage reference-stage"><img id="referenceImage" alt="Эталон выбранной карточки"><div id="noReference" class="empty-reference" hidden>Выберите кандидата из Top-20</div></div><div class="image-foot"><span id="referenceCaption"></span><span id="referenceScore" class="mono"></span></div></section>
+        </div>
+        <div class="meta-grid">
+          <section class="info-card"><div class="section-label">РЕШЕНИЕ ЭКСПЕРТА</div><p id="evidence" class="evidence"></p><dl id="decisionMeta" class="meta-list"></dl></section>
+          <section class="info-card"><div class="section-label">ВЫБРАННЫЙ КАНДИДАТ</div><h3 id="candidateName"></h3><p id="candidateWinery" class="muted"></p><dl id="candidateMeta" class="meta-list"></dl></section>
+        </div>
+        <section class="ocr-card"><div class="section-label">OCR · РАСПОЗНАННЫЙ ТЕКСТ <span id="ocrCount"></span></div><div id="ocrLines" class="ocr-lines"></div><p class="hint">OCR может ошибаться. Текст показан для анализа и не считается подтверждением метки.</p></section>
+        <section class="candidates-section"><div class="candidates-heading"><div><div class="eyebrow">ВИЗУАЛЬНЫЙ ПОИСК</div><h2>20 ближайших эталонов</h2></div><span id="rankNote" class="rank-note"></span></div><div id="candidateGrid" class="candidate-grid"></div></section>
+        <section class="provenance"><details><summary>Происхождение данных и ограничения</summary><p>Метки присвоены вручную после просмотра Top-20; это материал для анализа, а не независимый тест точности. Балл — визуальное сходство, не вероятность правильного ответа.</p><dl id="provenanceHashes" class="meta-list mono"></dl></details></section>
+      </div>
+    </main>
+  </div>
+</body>
+</html>
