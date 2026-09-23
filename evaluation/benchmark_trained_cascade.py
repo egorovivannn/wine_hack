@@ -145,6 +145,8 @@ def main():
     latencies = [r["latency_ms"] for r in rows]
     report = dict(population=len(paths), verified=sum(l.status == "verified" for l in labels.values()),
                   baseline=score_rows(baseline, labels),
+                  baseline_p50_ms=float(np.percentile([r["latency_ms"] for r in baseline], 50)),
+                  baseline_p95_ms=float(np.percentile([r["latency_ms"] for r in baseline], 95)),
                   detector_visual=score_rows([dict(image_path=r["image_path"], predicted_slug=r["visual_top5_slugs"][0],
                                                    top5_slugs=r["visual_top5_slugs"]) for r in rows], labels),
                   detector_head=score_rows([dict(image_path=r["image_path"], predicted_slug=r["head_top5_slugs"][0],

@@ -119,6 +119,8 @@ def main():
     random.seed(args.seed)
     np.random.seed(args.seed)
     started = time.perf_counter()
+    if torch.cuda.is_available():
+        torch.cuda.reset_peak_memory_stats()
     frame, vectors, fingerprint = features(args.manifest, args.model_dir,
                                            args.manifest.parent / "siglip_features.npz", args.encode_batch)
     if frame.groupby("vintage_id").split.nunique().max() != 1:
@@ -142,8 +144,6 @@ def main():
     base = {s: retrieval(None, frame, x, s) for s in ("val", "test")}
     history = []
     best = -1.0
-    if device.type == "cuda":
-        torch.cuda.reset_peak_memory_stats()
     for epoch in range(args.epochs):
         model.train()
         losses = []
