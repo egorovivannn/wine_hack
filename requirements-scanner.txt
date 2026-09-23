@@ -1,0 +1,10 @@
+# Install CUDA PyTorch 2.6.0 first; see README.md. These are direct runtime and test dependencies.
+fastapi==0.115.12
+huggingface-hub==0.30.2
+httpx==0.28.1
+numpy==2.2.4
+Pillow==11.1.0
+python-multipart==0.0.20
+safetensors==0.5.3
+transformers==4.51.2
+uvicorn==0.34.0
