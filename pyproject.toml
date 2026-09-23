@@ -1,0 +1,39 @@
+[project]
+name = "wine-hack-scanner"
+version = "0.1.0"
+description = "Reproducible Russian wine bottle scanner for the RSHB hackathon"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "easyocr==1.7.2",
+    "fastapi==0.115.12",
+    "huggingface-hub==0.30.2",
+    "httpx==0.28.1",
+    "numpy==2.2.4",
+    "opencv-python-headless==5.0.0.93",
+    "pandas==2.2.3",
+    "pillow==11.1.0",
+    "python-multipart==0.0.20",
+    "rapidfuzz==3.14.3",
+    "safetensors==0.5.3",
+    "scikit-image==0.26.0",
+    "shapely==2.1.2",
+    "torch==2.6.0+cu124",
+    "torchvision==0.21.0+cu124",
+    "transformers==4.51.2",
+    "unidecode==1.4.0",
+    "uvicorn==0.34.0",
+]
+
+[tool.uv]
+package = false
+environments = ["sys_platform == 'linux' and platform_machine == 'x86_64'"]
+required-environments = ["sys_platform == 'linux' and platform_machine == 'x86_64'"]
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu124" }
+torchvision = { index = "pytorch-cu124" }
+
+[[tool.uv.index]]
+name = "pytorch-cu124"
+url = "https://download.pytorch.org/whl/cu124"
+explicit = true
