@@ -16,6 +16,8 @@ from PIL import UnidentifiedImageError
 
 from .catalog import ROOT, sha256_file
 from .image import decode_image, query_views
+from .ocr import (MODEL_DIR as DEFAULT_OCR_MODEL_DIR, OCRReader, OCRReranker,
+                  OCR_WEIGHT, VISUAL_MARGIN_FOR_OCR)
 from .vision import (DEFAULT_INDEX, DEFAULT_MANIFEST, DEFAULT_MODEL_DIR,
                      VisionEncoder, load_index)
 
@@ -26,7 +28,8 @@ STATIC_PAGE = Path(__file__).parent / "static/index.html"
 
 class SearchEngine:
     def __init__(self, manifest_path: Path, index_path: Path, model_dir: Path,
-                 images_dir: Path):
+                 images_dir: Path, use_ocr: bool = False,
+                 ocr_model_dir: Path = DEFAULT_OCR_MODEL_DIR):
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         self.cards = {card["slug"]: card for card in manifest["cards"]}
         self.images_dir = images_dir
@@ -35,6 +38,9 @@ class SearchEngine:
         if index_metadata["model_weights_sha256"] != sha256_file(model_dir / "model.safetensors"):
             raise ValueError("Model weights differ from the checkpoint used for the index")
         self.encoder = VisionEncoder(model_dir)
+        self.ocr_model_dir = Path(ocr_model_dir)
+        self.ocr_reader = OCRReader(self.ocr_model_dir) if use_ocr else None
+        self.ocr_reranker = OCRReranker(self.cards) if use_ocr else None
         self.lock = Lock()
 
     @classmethod
@@ -44,6 +50,8 @@ class SearchEngine:
             index_path=Path(os.getenv("WINE_INDEX", str(DEFAULT_INDEX))),
             model_dir=Path(os.getenv("WINE_MODEL_DIR", str(DEFAULT_MODEL_DIR))),
             images_dir=Path(os.getenv("WINE_IMAGES_DIR", str(ROOT / "data/competition_imgs"))),
+            use_ocr=os.getenv("WINE_OCR", "1") == "1",
+            ocr_model_dir=Path(os.getenv("WINE_OCR_MODEL_DIR", str(DEFAULT_OCR_MODEL_DIR))),
         )
 
     def get_card(self, slug: str) -> dict | None:
@@ -61,14 +69,26 @@ class SearchEngine:
         views = list(query_views(image))
         with self.lock:
             vectors = self.encoder.encode(views)
-        ranked = self.gallery.search(vectors, top_k=6)
+            ranked = self.gallery.search(vectors, top_k=20 if self.ocr_reader else 6)
+            ocr_used = bool(self.ocr_reader and len(ranked) > 1 and
+                            ranked[0].score - ranked[1].score < VISUAL_MARGIN_FOR_OCR)
+            lines = self.ocr_reader.read(image) if ocr_used else []
+        if ocr_used:
+            ranked = self.ocr_reranker.rerank(ranked, lines)
+        ranked = ranked[:6]
         first = ranked[0]
-        margin = first.score - ranked[1].score if len(ranked) > 1 else None
+        margin = None
+        if len(ranked) > 1:
+            margin = first.score - ranked[1].score
+            if ocr_used:
+                margin += OCR_WEIGHT * (self.ocr_reranker.lexical_score(lines, first.slug) -
+                                        self.ocr_reranker.lexical_score(lines, ranked[1].slug))
         return {
             "slug": first.slug,
             "card": self.cards[first.slug],
             "visual_similarity": first.score,
             "margin_to_second": margin,
+            "ocr_used": ocr_used,
             "shared_reference": bool(len(ranked) > 1 and
                                      ranked[1].image_name == first.image_name),
             "alternatives": [asdict(item) for item in ranked[1:]],
