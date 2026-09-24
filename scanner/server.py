@@ -1,4 +1,4 @@
-"""Local API for the organizer's evaluator and the mobile wine card."""
+"""Local API for the organizer's evaluator and the web wine card."""
 
 from __future__ import annotations
 
@@ -18,6 +18,7 @@ from .catalog import ROOT, sha256_file
 from .image import decode_image, query_views
 from .ocr import (MODEL_DIR as DEFAULT_OCR_MODEL_DIR, OCRReader, OCRReranker,
                   OCR_WEIGHT, VISUAL_MARGIN_FOR_OCR)
+from .pairing import recommend_pairings
 from .vision import (DEFAULT_INDEX, DEFAULT_MANIFEST, DEFAULT_MODEL_DIR,
                      VisionEncoder, load_index)
 
@@ -133,6 +134,16 @@ def create_app(engine: SearchEngine | None = None) -> FastAPI:
         if card is None:
             raise HTTPException(status_code=404, detail="Unknown slug")
         return card
+
+    @app.get("/v1/wines/{slug}/pairings")
+    def get_pairings(slug: str, dish: str | None = None):
+        card = app.state.engine.get_card(slug)
+        if card is None:
+            raise HTTPException(status_code=404, detail="Unknown slug")
+        try:
+            return recommend_pairings(card, dish)
+        except ValueError as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
 
     @app.get("/v1/wines/{slug}/image")
     def get_wine_image(slug: str):

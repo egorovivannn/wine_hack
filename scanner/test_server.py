@@ -47,6 +47,11 @@ class ServerTests(unittest.TestCase):
             self.assertEqual(response.json(), {"slug": "verified-slug"})
             self.assertEqual(client.get("/v1/wines/verified-slug").status_code, 200)
             self.assertEqual(client.get("/v1/wines/verified-slug/image").status_code, 200)
+            pairing = client.get("/v1/wines/verified-slug/pairings", params={"dish": "fish"})
+            self.assertEqual(pairing.status_code, 200)
+            self.assertEqual(pairing.json()["selected"]["dish"], "fish")
+            self.assertEqual(client.get("/v1/wines/verified-slug/pairings",
+                                        params={"dish": "unknown"}).status_code, 422)
 
     def test_bad_or_missing_image_returns_clear_error(self):
         with TestClient(create_app(FakeEngine(self.image_path))) as client:

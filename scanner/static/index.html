@@ -13,7 +13,7 @@
       font: 16px/1.48 system-ui, -apple-system, "Segoe UI", sans-serif; }
     button, input, textarea { font: inherit; }
     button { cursor: pointer; }
-    button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px solid #bb7bc9; outline-offset: 2px; }
+    button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid #bb7bc9; outline-offset: 2px; }
     header { background: var(--purple); color: #fff; padding: 18px max(20px, calc((100vw - 940px)/2)); }
     .brand { font-weight: 800; letter-spacing: .01em; font-size: 19px; }
     .brand small { display: block; font-weight: 500; font-size: 12px; color: #e9d4e8; }
@@ -62,6 +62,17 @@
     .saved-item { border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
     .saved-item p { color: var(--muted); white-space: pre-wrap; margin: 7px 0; }
     .saved-item small { color: var(--muted); }
+    .pairing-panel { border-top: 1px solid var(--line); margin-top: 22px; padding-top: 20px; }
+    .pairing-panel .lead { margin-bottom: 12px; }
+    .pairing-options { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px; }
+    .pairing-option { background: #f7f2f7; border-radius: 10px; padding: 12px; }
+    .pairing-option strong { display: block; margin-bottom: 5px; }
+    .pairing-option small { color: var(--muted); }
+    .pairing-panel label { display: block; font-weight: 650; margin: 17px 0 8px; }
+    .pairing-check { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    .pairing-check select { border: 1px solid #c9b8cf; border-radius: 10px; background: #fff;
+      color: var(--ink); padding: 11px; min-height: 46px; min-width: 220px; }
+    .pairing-answer { background: #f7f2f7; border-radius: 10px; padding: 12px; margin-top: 12px; }
     .alternatives { display: grid; gap: 9px; margin-top: 16px; }
     .alternative { border: 1px solid var(--line); border-radius: 10px; padding: 11px 14px;
       background: #fff; text-align: left; color: var(--ink); }
@@ -91,7 +102,7 @@
           <div class="upload">
             <strong>Фото этикетки</strong>
             <span>Держите нужную бутылку в центре кадра</span>
-            <input id="image-input" name="image" type="file" accept="image/*" capture="environment" required aria-label="Выбрать фотографию вина">
+            <input id="image-input" name="image" type="file" accept="image/*" required aria-label="Выбрать фотографию вина">
           </div>
           <div class="actions"><button id="submit" class="primary" type="submit">Найти вино</button></div>
           <p id="status" class="status" role="status" aria-live="polite"></p>
@@ -113,6 +124,27 @@
           </div>
         </div>
         <div id="similar-list" class="alternatives" hidden></div>
+        <section class="pairing-panel" aria-labelledby="pairing-title">
+          <h3 id="pairing-title">С чем подать это вино</h3>
+          <p class="lead">Подсказки основаны на категории, названии и описании вина. Выберите блюдо, чтобы проверить сочетание.</p>
+          <div id="pairing-suggestions" class="pairing-options"></div>
+          <label for="pairing-dish">Что у вас к ужину?</label>
+          <div class="pairing-check">
+            <select id="pairing-dish">
+              <option value="">Выберите блюдо</option>
+              <option value="fish">Рыба</option>
+              <option value="seafood">Морепродукты</option>
+              <option value="poultry">Птица</option>
+              <option value="red_meat">Красное мясо</option>
+              <option value="vegetables">Овощные блюда</option>
+              <option value="cheese">Сыр</option>
+              <option value="dessert">Десерт</option>
+              <option value="spicy">Острые блюда</option>
+            </select>
+            <button id="pairing-button" class="secondary" type="button">Проверить сочетание</button>
+          </div>
+          <p id="pairing-answer" class="pairing-answer" role="status" aria-live="polite" hidden></p>
+        </section>
         <div class="diary-form">
           <h3>Сохранить впечатление</h3>
           <label for="diary-note">Что запомнилось в этом вине?</label>
@@ -167,6 +199,36 @@
       addFact('Категория', card.category);
       $('similar-list').hidden = true; $('similar-list').replaceChildren();
       $('diary-note').value = ''; $('save-status').textContent = '';
+      $('pairing-suggestions').replaceChildren(); $('pairing-dish').value = '';
+      $('pairing-answer').hidden = true; $('pairing-answer').textContent = '';
+      loadPairings(card.slug);
+    }
+    async function loadPairings(slug, dish = null) {
+      try {
+        const params = dish ? `?dish=${encodeURIComponent(dish)}` : '';
+        const response = await fetch(`/v1/wines/${encodeURIComponent(slug)}/pairings${params}`);
+        if (!response.ok) throw new Error('Не удалось получить подсказку.');
+        const data = await response.json();
+        if (!current || current.slug !== slug) return;
+        if (dish) {
+          const answer = data.selected;
+          $('pairing-answer').textContent = `${answer.label}: ${answer.fit}. ${answer.reason}`;
+          $('pairing-answer').hidden = false;
+          return;
+        }
+        const suggestions = $('pairing-suggestions');
+        suggestions.replaceChildren();
+        for (const suggestion of data.suggestions) {
+          const box = document.createElement('div'); box.className = 'pairing-option';
+          const title = document.createElement('strong'); title.textContent = suggestion.label;
+          const reason = document.createElement('small'); reason.textContent = suggestion.reason;
+          box.append(title, reason); suggestions.append(box);
+        }
+      } catch (error) {
+        if (!current || current.slug !== slug) return;
+        $('pairing-answer').textContent = error.message || 'Не удалось получить подсказку.';
+        $('pairing-answer').hidden = false;
+      }
     }
     $('scan-form').addEventListener('submit', async event => {
       event.preventDefault();
@@ -211,6 +273,16 @@
       try { return JSON.parse(localStorage.getItem(diaryKey) || '{}'); }
       catch (_) { return {}; }
     }
+    $('pairing-button').addEventListener('click', () => {
+      if (!current) return;
+      const dish = $('pairing-dish').value;
+      if (!dish) {
+        $('pairing-answer').textContent = 'Сначала выберите блюдо.';
+        $('pairing-answer').hidden = false;
+        return;
+      }
+      loadPairings(current.slug, dish);
+    });
     $('save').addEventListener('click', () => {
       if (!current) return;
       try {
