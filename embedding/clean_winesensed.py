@@ -65,6 +65,7 @@ def clean(
     if frame.filename.duplicated().any() or frame.sha256.duplicated().any():
         raise ValueError("Source contains duplicate names or bytes")
     groups = Groups(frame.vintage_id.unique().tolist())
+    visual_groups = Groups(frame.vintage_id.unique().tolist())
     known = frame[frame.winery_id.notna() & frame.winery_id.ne("")]
     for _, members in known.groupby("winery_id"):
         ids = sorted(members.vintage_id.unique())
@@ -78,6 +79,7 @@ def clean(
             within_class.append((a, b, distance))
         else:
             groups.union(frame.vintage_id.iloc[a], frame.vintage_id.iloc[b])
+            visual_groups.union(frame.vintage_id.iloc[a], frame.vintage_id.iloc[b])
             cross_class.append((a, b, distance))
     # A near-identical second photograph does not establish a real positive pair.
     discarded = set()
@@ -86,6 +88,7 @@ def clean(
             discarded.add(b)
     frame["phash"] = [f"{value:016x}" for value in hashes]
     frame["identity_group"] = frame.vintage_id.map(groups.find)
+    frame["ambiguity_group"] = frame.vintage_id.map(visual_groups.find)
     prior_vintages = prior_vintages or set()
     forced_groups = {
         groups.find(vintage) for vintage in prior_vintages if vintage in groups.parent

@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import json
+import tempfile
 import unittest
 from collections import Counter
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -13,7 +15,7 @@ from PIL import Image
 from .clean_winesensed import clean, near_pairs
 from .external_views import box_crop
 from .prepare_norwegian import assign_scene_splits, exact_joins, stable_split
-from .train_external_adapter import retrieval
+from .train_external_adapter import load_data, retrieval, select_hard_negatives
 from .train_external_reranker import (
     current_hybrid_proxy,
     lexical_score,
@@ -100,6 +102,48 @@ class ExternalDataTests(unittest.TestCase):
         result = retrieval(rows, vectors, "norwegian", "val")
         self.assertEqual(2, result["gallery"])
         self.assertEqual(1, result["top1"])
+
+    def test_hard_negative_mining_skips_ambiguous_aliases(self):
+        order = np.array([0, 1, 2, 3])
+        self.assertEqual(
+            [2, 3],
+            select_hard_negatives(
+                order, 0, ["same", "same", "other", "third"], "same", 2
+            ),
+        )
+
+    def test_query_reference_ambiguity_group_must_match(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            rows = [
+                dict(
+                    source="norwegian",
+                    role="reference",
+                    identity="a",
+                    split="train",
+                    ambiguity_group="group-a",
+                    view="ref.jpg",
+                ),
+                dict(
+                    source="norwegian",
+                    role="query",
+                    identity="a",
+                    split="train",
+                    ambiguity_group="group-b",
+                    scene_group="scene-1",
+                    view="query.jpg",
+                ),
+            ]
+            manifest = root / "views.jsonl"
+            manifest.write_text("".join(json.dumps(row) + "\n" for row in rows))
+            features = root / "features.npz"
+            np.savez_compressed(
+                features,
+                vectors=np.ones((2, 2), dtype=np.float32),
+                views=np.array(["ref.jpg", "query.jpg"]),
+            )
+            with self.assertRaisesRegex(ValueError, "ambiguity group"):
+                load_data(manifest, features)
 
     def test_reranker_scores_truth_and_ocr(self):
         example = dict(

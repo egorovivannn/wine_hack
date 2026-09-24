@@ -34,6 +34,23 @@ def permitted_gallery_splits(split: str) -> set[str]:
     raise ValueError(split)
 
 
+def select_hard_negatives(
+    order: np.ndarray,
+    target: int,
+    reference_groups: list[str],
+    positive_group: str,
+    count: int,
+) -> list[int]:
+    selected = [
+        int(index)
+        for index in order
+        if index != target and reference_groups[index] != positive_group
+    ][:count]
+    if len(selected) != count:
+        raise ValueError("Too few non-ambiguous hard negatives")
+    return selected
+
+
 def load_data(views: Path, features: Path) -> tuple[list[dict], np.ndarray]:
     rows = [json.loads(line) for line in views.read_text().splitlines()]
     with np.load(features) as saved:
@@ -46,12 +63,17 @@ def load_data(views: Path, features: Path) -> tuple[list[dict], np.ndarray]:
         reference = [
             r for r in rows if r["source"] == source and r["role"] == "reference"
         ]
-        keys = [(r["identity"], r["split"]) for r in reference]
+        keys = {(r["identity"], r["split"]): r for r in reference}
         if len(set(r["identity"] for r in reference)) != len(reference):
             raise ValueError("Multiple references per identity")
         for row in (r for r in rows if r["source"] == source):
-            if (row["identity"], row["split"]) not in keys:
+            reference_row = keys.get((row["identity"], row["split"]))
+            if reference_row is None:
                 raise ValueError("Query/reference identity or split mismatch")
+            if row.get("ambiguity_group", row["identity"]) != reference_row.get(
+                "ambiguity_group", reference_row["identity"]
+            ):
+                raise ValueError("Query/reference ambiguity group differs")
     scene_splits = defaultdict(set)
     winery_splits = defaultdict(set)
     for row in rows:
@@ -181,17 +203,21 @@ def train(
         lookup = {code: j for j, code in enumerate(codes)}
         targets = np.array([lookup[rows[i]["identity"]] for i in queries])
         scores = vectors[queries] @ vectors[refs].T
-        hard = np.argsort(-scores, axis=1, kind="stable")[:, :64]
+        hard = np.argsort(-scores, axis=1, kind="stable")
+        reference_groups = [
+            rows[i].get("ambiguity_group", rows[i]["identity"]) for i in refs
+        ]
         # Positive is always first, followed by the nearest other products.
+        negatives = []
+        for order, query, target in zip(hard, queries, targets):
+            group = rows[query].get("ambiguity_group", rows[query]["identity"])
+            negatives.append(
+                select_hard_negatives(order, int(target), reference_groups, group, 63)
+            )
         candidates = np.concatenate(
             [
                 targets[:, None],
-                np.array(
-                    [
-                        [j for j in order if j != target][:63]
-                        for order, target in zip(hard, targets)
-                    ]
-                ),
+                np.asarray(negatives),
             ],
             axis=1,
         )

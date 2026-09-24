@@ -15,6 +15,7 @@ from ultralytics import YOLO
 
 from scanner.image import decode_image, query_views, reference_views
 
+from .clean_winesensed import Groups, near_pairs, perceptual_hash
 from .prepare_norwegian import exact_joins
 
 
@@ -99,6 +100,7 @@ def wine_views(manifest: Path, output: Path, checkpoint: Path) -> list[dict]:
                         source="winesensed",
                         role=role,
                         identity=str(vintage),
+                        ambiguity_group=record.ambiguity_group,
                         winery_id=record.winery_id,
                         split=record.split,
                         source_sha256=record.sha256,
@@ -137,6 +139,23 @@ def norwegian_views(source_root: Path, output: Path) -> list[dict]:
     joins = exact_joins(annotations["categories"], metadata["products"])
     product_splits = json.loads((source_root / "product_splits.json").read_text())
     references = {product["product_code"]: product for product in joins.values()}
+    reference_hashes = []
+    reference_codes = []
+    for code, product in sorted(references.items()):
+        reference = next(
+            (
+                f"NM_NGD_product_images/{code}/{kind}.jpg"
+                for kind in ("front", "main")
+                if kind in product["image_types"]
+            ),
+            None,
+        )
+        if reference and (source_root / reference).exists():
+            reference_codes.append(code)
+            reference_hashes.append(perceptual_hash(source_root / reference))
+    ambiguity = Groups(reference_codes)
+    for left, right, _ in near_pairs(np.asarray(reference_hashes, dtype=np.uint64)):
+        ambiguity.union(reference_codes[left], reference_codes[right])
     for code, product in sorted(references.items()):
         reference = next(
             (
@@ -165,6 +184,7 @@ def norwegian_views(source_root: Path, output: Path) -> list[dict]:
                 source="norwegian",
                 role="reference",
                 identity=code,
+                ambiguity_group=ambiguity.find(code),
                 product_name=product["product_name"],
                 split=product_splits[code],
                 source_sha256=sha256(path),
@@ -191,6 +211,7 @@ def norwegian_views(source_root: Path, output: Path) -> list[dict]:
                 source="norwegian",
                 role="query",
                 identity=code,
+                ambiguity_group=ambiguity.find(code),
                 product_name=row["product_name"],
                 split=row["split"],
                 source_sha256=row["scene_sha256"],

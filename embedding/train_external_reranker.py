@@ -141,6 +141,12 @@ def build_examples(
                 values=values,
                 truth=matching[0] if matching else -1,
                 candidates=[rows[i]["identity"] for i in chosen],
+                ambiguity_mask=[
+                    rows[i].get("ambiguity_group", rows[i]["identity"])
+                    == rows[qi].get("ambiguity_group", rows[qi]["identity"])
+                    and rows[i]["identity"] != rows[qi]["identity"]
+                    for i in chosen
+                ],
             )
         )
     return examples
@@ -269,6 +275,10 @@ def fit(
         )
     )
     y = torch.tensor([e["truth"] for e in examples if e["truth"] >= 0])
+    ambiguity_mask = torch.tensor(
+        [e["ambiguity_mask"] for e in examples if e["truth"] >= 0],
+        dtype=torch.bool,
+    )
     if len(y) < 50:
         raise ValueError("Too few train queries with positive Top-20 candidate")
     torch.manual_seed(42)
@@ -294,7 +304,9 @@ def fit(
         output,
     )
     for epoch in range(150):
-        logits = (raw_heads + scale * model(x).squeeze(-1)) / 0.07
+        logits = ((raw_heads + scale * model(x).squeeze(-1)) / 0.07).masked_fill(
+            ambiguity_mask, -1e4
+        )
         loss = F.cross_entropy(logits, y)
         optimizer.zero_grad(set_to_none=True)
         loss.backward()
@@ -341,6 +353,7 @@ def fit(
         last_val_top1=history[-1]["val_top1"],
         train_queries=len(examples),
         train_positive_candidates=len(y),
+        ambiguous_training_candidates_masked=int(ambiguity_mask.sum()),
         history=history,
     )
 
