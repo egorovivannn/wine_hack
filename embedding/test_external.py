@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import tempfile
 import unittest
 from collections import Counter
 from pathlib import Path
+from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
@@ -15,6 +17,7 @@ from PIL import Image
 from .clean_winesensed import clean, near_pairs
 from .external_views import box_crop
 from .prepare_norwegian import assign_scene_splits, exact_joins, stable_split
+from .prepare_winesensed_sample import ensure_metadata
 from .train_external_adapter import load_data, retrieval, select_hard_negatives
 from .train_external_reranker import (
     current_hybrid_proxy,
@@ -25,6 +28,55 @@ from .train_external_reranker import (
 
 
 class ExternalDataTests(unittest.TestCase):
+    def test_metadata_download_is_pinned_and_existing_file_is_preserved(self):
+        payload = b"verified metadata archive"
+        article = {
+            "files": [
+                {
+                    "name": "metadata.zip",
+                    "computed_md5": hashlib.md5(payload).hexdigest(),
+                    "download_url": "https://example.test/metadata.zip",
+                }
+            ]
+        }
+
+        class Response:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_):
+                return None
+
+            def raise_for_status(self):
+                return None
+
+            def iter_content(self, _):
+                yield payload
+
+        with tempfile.TemporaryDirectory() as directory:
+            destination = Path(directory) / "metadata.zip"
+            with (
+                patch(
+                    "embedding.prepare_winesensed_sample.METADATA_MD5",
+                    hashlib.md5(payload).hexdigest(),
+                ),
+                patch(
+                    "embedding.prepare_winesensed_sample.METADATA_SHA256",
+                    hashlib.sha256(payload).hexdigest(),
+                ),
+                patch(
+                    "embedding.prepare_winesensed_sample.requests.get",
+                    return_value=Response(),
+                ) as get,
+            ):
+                ensure_metadata(destination, article)
+                ensure_metadata(destination, article)
+                self.assertEqual(payload, destination.read_bytes())
+                self.assertEqual(1, get.call_count)
+                destination.write_bytes(b"different")
+                with self.assertRaisesRegex(ValueError, "SHA-256 mismatch"):
+                    ensure_metadata(destination, article)
+
     def test_exact_join_rejects_ambiguous_and_missing_reference(self):
         categories = [
             {"id": 0, "name": "Unique"},

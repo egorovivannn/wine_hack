@@ -1,4 +1,4 @@
-"""Fetch a small, identity-labeled WineSensed sample from the official Figshare ZIP."""
+"""Fetch a reproducible identity-labeled WineSensed sample from Figshare."""
 
 from __future__ import annotations
 
@@ -6,7 +6,9 @@ import argparse
 import hashlib
 import io
 import json
+import os
 import random
+import tempfile
 import time
 import zlib
 from collections import Counter, defaultdict
@@ -19,6 +21,7 @@ from PIL import Image
 
 ARTICLE = "https://api.figshare.com/v2/articles/23376560"
 METADATA_MD5 = "6faa2bd1432412c4b41347e5e1607fef"
+METADATA_SHA256 = "ca3946b627c242dd98182b79ba655732c16e0edeec61445eb557d2bee1309ba0"
 CHUNK_001_MD5 = "159075d098496e6bd7a192d75268a865"
 CHUNK_001_BYTES = 3536729066
 
@@ -29,6 +32,36 @@ def sha256(path: Path) -> str:
         for block in iter(lambda: f.read(1024 * 1024), b""):
             h.update(block)
     return h.hexdigest()
+
+
+def ensure_metadata(path: Path, article: dict) -> None:
+    """Fetch the pinned metadata when absent; never replace a user-supplied file."""
+    if path.exists():
+        if sha256(path) != METADATA_SHA256:
+            raise ValueError("Existing WineSensed metadata.zip SHA-256 mismatch")
+        return
+    source = next(f for f in article["files"] if f["name"] == "metadata.zip")
+    if source["computed_md5"] != METADATA_MD5:
+        raise ValueError("Figshare metadata.zip MD5 changed")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            dir=path.parent, prefix="metadata-", suffix=".part", delete=False
+        ) as stream:
+            temporary = Path(stream.name)
+            with requests.get(
+                source["download_url"], stream=True, timeout=90
+            ) as response:
+                response.raise_for_status()
+                for block in response.iter_content(1024 * 1024):
+                    stream.write(block)
+        if sha256(temporary) != METADATA_SHA256:
+            raise ValueError("Downloaded WineSensed metadata.zip SHA-256 mismatch")
+        os.replace(temporary, path)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
 
 
 class RemoteZip(io.RawIOBase):
@@ -126,9 +159,8 @@ def main():
         help="Reuse and CRC-check an incomplete output directory",
     )
     args = p.parse_args()
-    if hashlib.md5(args.metadata.read_bytes()).hexdigest() != METADATA_MD5:
-        p.error("Official metadata.zip MD5 mismatch")
     article = requests.get(ARTICLE, timeout=30).json()
+    ensure_metadata(args.metadata, article)
     source = next(f for f in article["files"] if f["name"] == args.chunk)
     if args.chunk == "chunk_001.zip" and (
         source["computed_md5"] != CHUNK_001_MD5
