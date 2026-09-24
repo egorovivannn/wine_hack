@@ -12,7 +12,12 @@ from pathlib import Path
 import torch
 
 from embedding.train_external_adapter import load_data, retrieval, sha256
-from embedding.train_external_reranker import build_examples, checkpoint_score, metrics
+from embedding.train_external_reranker import (
+    build_examples,
+    checkpoint_score,
+    current_hybrid_proxy,
+    metrics,
+)
 from embedding.train_label_head import LabelHead
 from scanner.vision import DEFAULT_MODEL_DIR
 
@@ -93,6 +98,7 @@ def main() -> None:
         )
         norwegian.update(
             {
+                "current_hybrid_proxy": current_hybrid_proxy(rows, vectors, ocr, split),
                 "hybrid_0.03": metrics(
                     frozen_examples, lambda v: v[:, 0] + 0.03 * v[:, 5]
                 ),

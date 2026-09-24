@@ -14,7 +14,12 @@ from .clean_winesensed import clean, near_pairs
 from .external_views import box_crop
 from .prepare_norwegian import assign_scene_splits, exact_joins, stable_split
 from .train_external_adapter import retrieval
-from .train_external_reranker import lexical_score, metrics, tokens
+from .train_external_reranker import (
+    current_hybrid_proxy,
+    lexical_score,
+    metrics,
+    tokens,
+)
 
 
 class ExternalDataTests(unittest.TestCase):
@@ -124,6 +129,43 @@ class ExternalDataTests(unittest.TestCase):
             0,
         )
         self.assertIn("evergood", tokens("EVERGOOD CLASSIC"))
+
+    def test_current_hybrid_proxy_uses_same_ocr_trigger(self):
+        rows = [
+            dict(
+                source="norwegian",
+                role="reference",
+                identity="a",
+                split="train",
+                product_name="Riesling",
+                view="a.jpg",
+            ),
+            dict(
+                source="norwegian",
+                role="reference",
+                identity="b",
+                split="val",
+                product_name="Muscat",
+                view="b.jpg",
+            ),
+            dict(
+                source="norwegian",
+                role="query",
+                identity="b",
+                split="val",
+                product_name="Muscat",
+                view="query.jpg",
+            ),
+        ]
+        vectors = np.array([[0.8, 0], [0.79, 0], [1, 0]], dtype=np.float32)
+        result = current_hybrid_proxy(
+            rows,
+            vectors,
+            {"query.jpg": [{"text": "Muscat", "confidence": 0.99}]},
+            "val",
+        )
+        self.assertEqual(1, result["ocr_triggered"])
+        self.assertEqual(1, result["top1"])
 
 
 if __name__ == "__main__":

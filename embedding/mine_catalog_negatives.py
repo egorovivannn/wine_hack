@@ -137,11 +137,17 @@ def main() -> None:
         left, right = index.image_slugs[i], index.image_slugs[j]
         names_left = {" ".join(sorted(words(cards[slug]["name"]))) for slug in left}
         names_right = {" ".join(sorted(words(cards[slug]["name"]))) for slug in right}
-        ambiguous = (
-            bool(names_left & names_right)
-            or bool(set(left) & set(right))
-            or manifest["images"][i]["sha256"] == manifest["images"][j]["sha256"]
-        )
+        ambiguity_reasons = []
+        if names_left & names_right:
+            ambiguity_reasons.append("same_normalized_name")
+        if set(left) & set(right):
+            ambiguity_reasons.append("shared_slug")
+        if manifest["images"][i]["sha256"] == manifest["images"][j]["sha256"]:
+            ambiguity_reasons.append("identical_reference_bytes")
+        if visual[i, j] >= 0.95 and (
+            metadata_scores[i, j] >= 0.6 or ocr_scores[i, j] >= 0.6
+        ):
+            ambiguity_reasons.append("possible_alias_or_variant")
         rows.append(
             dict(
                 left=index.filenames[i],
@@ -151,7 +157,8 @@ def main() -> None:
                 visual=float(visual[i, j]),
                 ocr=float(ocr_scores[i, j]),
                 metadata=float(metadata_scores[i, j]),
-                ambiguous=ambiguous,
+                ambiguous=bool(ambiguity_reasons),
+                ambiguity_reasons=ambiguity_reasons,
                 selected_by=sorted(candidate_pairs[i, j]),
             )
         )
@@ -167,6 +174,9 @@ def main() -> None:
             Counter(method for row in rows for method in row["selected_by"])
         ),
         ambiguous_pairs=sum(r["ambiguous"] for r in rows),
+        ambiguity_reasons=dict(
+            Counter(reason for row in rows for reason in row["ambiguity_reasons"])
+        ),
         unambiguous_pairs=sum(not r["ambiguous"] for r in rows),
         index_sha256=sha256(args.index),
         manifest_sha256=sha256(args.manifest),

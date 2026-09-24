@@ -19,6 +19,9 @@ from rapidfuzz.fuzz import ratio
 from torch import nn
 from unidecode import unidecode
 
+from scanner.ocr import VISUAL_MARGIN_FOR_OCR, OCRLine, OCRReranker
+from scanner.vision import Candidate
+
 from .train_external_adapter import load_data, permitted_gallery_splits, sha256
 from .train_label_head import LabelHead
 
@@ -169,6 +172,83 @@ def metrics(examples: list[dict], scorer) -> dict:
         top1_rate=top1 / len(examples),
         hit5_rate=top5 / len(examples),
         recall20_rate=hit20 / len(examples),
+        errors=errors[:30],
+    )
+
+
+def current_hybrid_proxy(
+    rows: list[dict], vectors: np.ndarray, ocr: dict, split: str
+) -> dict:
+    """Run the current scanner's OCR trigger/scorer with available grocery names."""
+    gallery = [
+        i
+        for i, row in enumerate(rows)
+        if row["source"] == "norwegian"
+        and row["role"] == "reference"
+        and row["split"] in permitted_gallery_splits(split)
+    ]
+    queries = [
+        i
+        for i, row in enumerate(rows)
+        if row["source"] == "norwegian"
+        and row["role"] == "query"
+        and row["split"] == split
+    ]
+    cards = {
+        rows[i]["identity"]: dict(
+            slug=rows[i]["identity"],
+            name=rows[i]["product_name"],
+            winery="",
+            grape="",
+            reference_available=True,
+        )
+        for i in gallery
+    }
+    scorer = OCRReranker(cards)
+    counts = Counter()
+    errors = []
+    for qi in queries:
+        scores = vectors[gallery] @ vectors[qi]
+        top = np.argsort(-scores, kind="stable")[:20]
+        candidates = [
+            Candidate(
+                slug=rows[gallery[j]]["identity"],
+                score=float(scores[j]),
+                full_score=float(scores[j]),
+                center_score=float(scores[j]),
+                image_name=rows[gallery[j]]["view"],
+            )
+            for j in top
+        ]
+        truth = rows[qi]["identity"]
+        counts["ocr_triggered"] += int(
+            len(candidates) >= 2
+            and candidates[0].score - candidates[1].score < VISUAL_MARGIN_FOR_OCR
+        )
+        lines = [
+            OCRLine(line["text"], line["confidence"]) for line in ocr[rows[qi]["view"]]
+        ]
+        ranked = scorer.rerank(candidates, lines)
+        slugs = [candidate.slug for candidate in ranked]
+        counts["top1"] += int(slugs[0] == truth)
+        counts["hit5"] += int(truth in slugs[:5])
+        counts["recall20"] += int(truth in slugs)
+        if slugs[0] != truth:
+            errors.append(
+                dict(
+                    view=rows[qi]["view"],
+                    truth=truth,
+                    predicted=slugs[0],
+                    candidate_hit=truth in slugs,
+                )
+            )
+    return dict(
+        queries=len(queries),
+        gallery=len(gallery),
+        top1=counts["top1"],
+        hit5=counts["hit5"],
+        recall20=counts["recall20"],
+        ocr_triggered=counts["ocr_triggered"],
         errors=errors[:30],
     )
 

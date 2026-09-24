@@ -99,7 +99,14 @@ def main() -> None:
         names = [rows[i].get("product_name", "") for i in gallery]
         frequency = Counter(word for name in names for word in tokens(name))
         total = []
-        stages = {"detector": [], "encoder": [], "ocr": [], "ranking": []}
+        visual_total = []
+        stages = {
+            "detector": [],
+            "encoder": [],
+            "base_rank": [],
+            "ocr": [],
+            "ranking": [],
+        }
         for row in queries:
             begin = time.perf_counter()
             if source == "winesensed":
@@ -114,6 +121,8 @@ def main() -> None:
             query = encoder.encode([view], batch_size=1)[0]
             after_encode = time.perf_counter()
             base = gallery_vectors @ query
+            base_top = np.argsort(-base, kind="stable")[:20]
+            after_visual = time.perf_counter()
             if source == "norwegian":
                 lines = [
                     dict(text=line.text, confidence=line.confidence)
@@ -144,17 +153,19 @@ def main() -> None:
                 ]
                 _ = np.argmax(values[:, 1] + rerank["scale"] * correction)
             else:
-                after_ocr = after_encode
-                top = np.argsort(-base, kind="stable")[:20]
-                _ = top[0]
+                after_ocr = after_visual
+                _ = base_top[0]
             end = time.perf_counter()
             total.append((end - begin) * 1000)
+            visual_total.append((after_visual - begin) * 1000)
             stages["detector"].append((after_crop - begin) * 1000)
             stages["encoder"].append((after_encode - after_crop) * 1000)
-            stages["ocr"].append((after_ocr - after_encode) * 1000)
+            stages["base_rank"].append((after_visual - after_encode) * 1000)
+            stages["ocr"].append((after_ocr - after_visual) * 1000)
             stages["ranking"].append((end - after_ocr) * 1000)
         source_results[source] = dict(
             total=summary(total),
+            frozen_visual=summary(visual_total),
             stages={name: summary(values) for name, values in stages.items()},
             localization="YOLO central label"
             if source == "winesensed"
