@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import platform
 import subprocess
@@ -13,6 +14,7 @@ import torch
 from embedding.train_external_adapter import load_data, retrieval, sha256
 from embedding.train_external_reranker import build_examples, checkpoint_score, metrics
 from embedding.train_label_head import LabelHead
+from scanner.vision import DEFAULT_MODEL_DIR
 
 
 def main() -> None:
@@ -22,6 +24,13 @@ def main() -> None:
     parser.add_argument("--head", type=Path, required=True)
     parser.add_argument("--reranker-dir", type=Path, required=True)
     parser.add_argument("--ocr", type=Path, required=True)
+    parser.add_argument("--wine-manifest", type=Path, required=True)
+    parser.add_argument("--norwegian-pairs", type=Path, required=True)
+    parser.add_argument("--detector", type=Path, required=True)
+    parser.add_argument("--model-dir", type=Path, default=DEFAULT_MODEL_DIR)
+    parser.add_argument(
+        "--catalog-manifest", type=Path, default=Path("data/catalog_manifest.json")
+    )
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument(
         "--splits", nargs="+", choices=("val", "test"), default=["val", "test"]
@@ -30,6 +39,25 @@ def main() -> None:
     if args.output.exists():
         parser.error("Output exists")
     rows, vectors = load_data(args.views, args.features)
+    with args.wine_manifest.open(newline="") as stream:
+        wine_sources = {row["sha256"] for row in csv.DictReader(stream)}
+    if wine_sources != {
+        row["source_sha256"] for row in rows if row["source"] == "winesensed"
+    }:
+        raise ValueError("Wine views and audited source manifest differ")
+    norwegian_pairs = [
+        json.loads(line) for line in args.norwegian_pairs.read_text().splitlines()
+    ]
+    norwegian_sources = {
+        (str(row["annotation_id"]), row["product_code"], row["scene_sha256"])
+        for row in norwegian_pairs
+    }
+    if not {
+        (str(row["annotation_id"]), row["identity"], row["source_sha256"])
+        for row in rows
+        if row["source"] == "norwegian" and row["role"] == "query"
+    }.issubset(norwegian_sources):
+        raise ValueError("Norwegian queries differ from verified COCO joins")
     state = torch.load(args.head, map_location="cpu", weights_only=False)
     if state["views_sha256"] != sha256(args.views) or state[
         "features_sha256"
@@ -91,13 +119,23 @@ def main() -> None:
             "reranker_ocr_last": sha256(args.reranker_dir / "ocr_last.pt"),
         },
         ocr_sha256=sha256(args.ocr),
+        source_sha256={
+            "wine_manifest": sha256(args.wine_manifest),
+            "norwegian_pairs": sha256(args.norwegian_pairs),
+            "catalog_manifest": sha256(args.catalog_manifest),
+        },
+        base_checkpoint_sha256=sha256(args.model_dir / "model.safetensors"),
+        detector_checkpoint_sha256=sha256(args.detector),
+        ocr_weights_sha256=json.loads(args.ocr.with_suffix(".json").read_text())[
+            "ocr_checkpoint_sha256"
+        ],
         git_revision=subprocess.check_output(
             ["git", "rev-parse", "HEAD"], text=True
         ).strip(),
         python=platform.python_version(),
         torch=torch.__version__,
         gpu=torch.cuda.get_device_name(0) if torch.cuda.is_available() else "CPU",
-        split_protocol="Wine vintage/known winery/near duplicate group disjoint; Norwegian product and source scene-block disjoint. Wine capture sessions unavailable.",
+        split_protocol="Wine vintage/known winery/near duplicate group disjoint; Norwegian product and grouped shelf scenes disjoint. Source capture-session IDs unavailable.",
         gallery_policy="Same eligible gallery per split and method: train only; train+val; full train+val+test.",
     )
     args.output.parent.mkdir(parents=True, exist_ok=True)

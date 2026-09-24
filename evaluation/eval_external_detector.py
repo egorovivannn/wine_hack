@@ -5,6 +5,8 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import platform
+import subprocess
 import time
 from pathlib import Path
 
@@ -108,6 +110,11 @@ def main() -> None:
         checkpoint_sha256=sha256(args.checkpoint),
         data_manifest_sha256=sha256(root / "manifest.jsonl"),
         gpu=torch.cuda.get_device_name(0) if torch.cuda.is_available() else "CPU",
+        git_revision=subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], text=True
+        ).strip(),
+        python=platform.python_version(),
+        torch=torch.__version__,
         definition="IoU>=0.5 to annotation nearest image center under same selector; not bottle identity",
     )
     args.output.parent.mkdir(parents=True, exist_ok=True)

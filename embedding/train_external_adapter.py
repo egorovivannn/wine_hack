@@ -5,7 +5,10 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
+import platform
 import random
+import subprocess
 import time
 from collections import defaultdict
 from pathlib import Path
@@ -151,6 +154,8 @@ def train(
     torch.manual_seed(seed)
     torch.set_num_threads(4)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if device.type == "cuda":
+        torch.cuda.reset_peak_memory_stats()
     x = torch.from_numpy(vectors).to(device)
     train_sources = {}
     for source in ("winesensed", "norwegian"):
@@ -262,6 +267,16 @@ def train(
                 features_sha256=sha256(features),
                 elapsed_seconds=round(time.perf_counter() - started, 1),
                 seed=seed,
+                gpu=torch.cuda.get_device_name(0) if device.type == "cuda" else None,
+                peak_vram_gib=round(torch.cuda.max_memory_allocated() / 2**30, 3)
+                if device.type == "cuda"
+                else 0,
+                cpu_cores=os.cpu_count(),
+                python=platform.python_version(),
+                torch=torch.__version__,
+                git_revision=subprocess.check_output(
+                    ["git", "rev-parse", "HEAD"], text=True
+                ).strip(),
             ),
             indent=2,
         )

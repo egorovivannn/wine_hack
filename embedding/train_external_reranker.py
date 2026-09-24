@@ -5,7 +5,10 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import os
+import platform
 import re
+import subprocess
 from collections import Counter
 from pathlib import Path
 
@@ -349,6 +352,12 @@ def main() -> None:
         features_sha256=sha256(args.features),
         head_sha256=sha256(args.head),
         ocr_sha256=sha256(args.ocr),
+        cpu_cores=os.cpu_count(),
+        python=platform.python_version(),
+        torch=torch.__version__,
+        git_revision=subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], text=True
+        ).strip(),
     )
     (args.output / "report.json").write_text(json.dumps(report, indent=2) + "\n")
     (args.output / "history.json").write_text(

@@ -6,6 +6,7 @@ import argparse
 import hashlib
 import json
 import re
+from collections import Counter, defaultdict
 from pathlib import Path
 
 import numpy as np
@@ -120,11 +121,17 @@ def main() -> None:
     )
     np.fill_diagonal(ocr_scores, -1)
     np.fill_diagonal(metadata_scores, -1)
-    candidate_pairs = set()
-    for matrix in (visual, ocr_scores, metadata_scores):
+    candidate_pairs = defaultdict(set)
+    for method, matrix in (
+        ("visual", visual),
+        ("ocr", ocr_scores),
+        ("metadata", metadata_scores),
+    ):
         for i in range(len(index.filenames)):
             for j in np.argsort(-matrix[i], kind="stable")[:20]:
-                candidate_pairs.add(tuple(sorted((i, int(j)))))
+                if method != "visual" and matrix[i, j] <= 0:
+                    continue
+                candidate_pairs[tuple(sorted((i, int(j))))].add(method)
     rows = []
     for i, j in sorted(candidate_pairs):
         left, right = index.image_slugs[i], index.image_slugs[j]
@@ -145,6 +152,7 @@ def main() -> None:
                 ocr=float(ocr_scores[i, j]),
                 metadata=float(metadata_scores[i, j]),
                 ambiguous=ambiguous,
+                selected_by=sorted(candidate_pairs[i, j]),
             )
         )
     args.output.parent.mkdir(parents=True, exist_ok=True)
@@ -155,6 +163,9 @@ def main() -> None:
         catalog_images=len(index.filenames),
         multi_slug_references=sum(len(slugs) > 1 for slugs in index.image_slugs),
         candidate_pairs=len(rows),
+        selected_by_method=dict(
+            Counter(method for row in rows for method in row["selected_by"])
+        ),
         ambiguous_pairs=sum(r["ambiguous"] for r in rows),
         unambiguous_pairs=sum(not r["ambiguous"] for r in rows),
         index_sha256=sha256(args.index),
