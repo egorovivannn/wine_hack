@@ -39,6 +39,10 @@ url = "https://download.pytorch.org/whl/cu124"
 explicit = true
 
 [dependency-groups]
+audit = [
+    "httpx[socks]==0.28.1",
+]
 train = [
+    "pi-heif==1.4.0",
     "ultralytics>=8.4,<8.5",
 ]
