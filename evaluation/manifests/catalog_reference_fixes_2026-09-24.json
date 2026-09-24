@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "baseline_manifest_sha256": "5654d67ef71dfd3462aad1a00d949f5f5465a4c30f63667b95f388d68289a21d",
+  "fixes": [
+    {
+      "slug": "vibes-vermentino-viognier-barrel-fermented-2022",
+      "from_image": "03_Silvaner_2022_Barrel_Fermented_01addc1e7f.webp",
+      "target_image": "vibes_vermentino_viognier_barrel_fermented_vermentino_beloe_suhoe_115_fe273c3a1b.webp",
+      "target_sha256": "de09ed3defccb24c72aa11cf8e370c69155238ed293b5f23fbdf52d2892622c1",
+      "archive_member": "prod-svoe-vino-strapi/prod-svoe-vino/strapi/uploads/vibes_vermentino_viognier_barrel_fermented_vermentino_beloe_suhoe_115_fe273c3a1b.webp",
+      "evidence": "Source image depicts VIBES Silvaner; replacement names Vermentino-Viognier Barrel Fermented and shows a different label."
+    },
+    {
+      "slug": "sand-zh-oveze-rezerv",
+      "from_image": "Rebo_reserve_2023_2f54a334ff.webp",
+      "target_image": "Sandzhoveze_reserve_2023_9c8ad3555e.webp",
+      "target_sha256": "89a086a3dc9e854eff67885ec49746d4c489782cf844b96a1e8e3e0568c82ec2",
+      "archive_member": "prod-svoe-vino-strapi/prod-svoe-vino/strapi/uploads/Sandzhoveze_reserve_2023_9c8ad3555e.webp",
+      "evidence": "Current bottle label reads Rebo Reserve; replacement label reads Sangiovese Reserve."
+    },
+    {
+      "slug": "vinodelnya-byurne-byurne-pino-blan-beloe-suhoe-14",
+      "from_image": "Vione_2023_13d6c1ebf6.webp",
+      "target_image": "vinodelnya_byurne_byurne_pino_blan_beloe_suhoe_14_45558bffe3.webp",
+      "target_sha256": "4db38af2f0c530392b3ac619dfb541454ce2018e2be2fec20ac94ca15623cd35",
+      "archive_member": "prod-svoe-vino-strapi/prod-svoe-vino/strapi/uploads/vinodelnya_byurne_byurne_pino_blan_beloe_suhoe_14_45558bffe3.webp",
+      "evidence": "Current Burnier bottle label reads Viognier; replacement label reads Pinot Blanc."
+    }
+  ]
+}
