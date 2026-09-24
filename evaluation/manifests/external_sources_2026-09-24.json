@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "split_seed": 42,
+  "winesensed": {
+    "source_article": "https://api.figshare.com/v2/articles/23376560",
+    "chunk_id": 41161709,
+    "metadata_sha256": "ca3946b627c242dd98182b79ba655732c16e0edeec61445eb557d2bee1309ba0",
+    "raw_manifest_sha256": "6b32dabb985c0fdc1c9a1cf06f5b4721e4cf8c35d16d8f5418ff0f53bb202890",
+    "clean_manifest_sha256": "b32685c6303581324a3147a79db1043c247fa5d173318a5070f7315fc6c51db7",
+    "prior_300_manifest_sha256": "894fc87bccb56b81ac4116e9c729c80af525b8b8d876f78ecdb780f313faee85",
+    "split_classes": {
+      "train": 1693,
+      "val": 288,
+      "test": 303
+    },
+    "split_images": {
+      "train": 6763,
+      "val": 1152,
+      "test": 1211
+    },
+    "unknown_winery_classes": 2208
+  },
+  "norwegian": {
+    "source": "https://huggingface.co/datasets/valiantlynxz/norwegian-grocery",
+    "revision": "17cacfcb3ed0a0a24e757fa92c5c546cb3a19f57",
+    "license": "cc-by-nc-4.0",
+    "files_sha256": "a51c37ffae8384ea46e7bac09cfcbe27b31351d87e305d737912d02b61be844f",
+    "annotations_sha256": "db1c666315e7a37db28a8516bb34ee4d4835f1fbe0238ab87227b769c2ab462f",
+    "metadata_sha256": "69e28be68f63fd4d6f67f211743bee897312743c453130ccb4e59f6e74bf7a32",
+    "pairs_sha256": "abd1661aab9336cb7fc22ab617213ce15238c3017b5fd337cee35be117f6f78f",
+    "product_splits_sha256": "215393346f1cab05d1f6dff85861f3f1ab2abb41c2123876c3e5828c70906520",
+    "scene_splits_sha256": "dced97eb6da6c46fc61a6c492f06b119863e17b8d2930bea53c694e6a34497d2",
+    "split_pairs": {
+      "val": 998,
+      "test": 489,
+      "train": 10174
+    },
+    "split_scenes": {
+      "train": 177,
+      "val": 37,
+      "test": 30
+    }
+  },
+  "views": {
+    "winesensed_sha256": "a082f748bbacb79f1ed123c7ed47e5d161368914f9ea4e33e534c5e366c03002",
+    "norwegian_sha256": "a3d14248dbc86d76247b803241872efed8e05000fa290cb10266ecc01bbdfb70",
+    "combined_sha256": "763c033002aee21567faf40cdc20a53e80d4b1eedcdad42c48f8bd2012e7dc52",
+    "features_sha256": "787f0b55adab581d1fa48878359d722d1880af15354b4a7a30aa0b549e15987e",
+    "count": 13946
+  },
+  "catalog_hard_pairs": {
+    "catalog_manifest_sha256": "5654d67ef71dfd3462aad1a00d949f5f5465a4c30f63667b95f388d68289a21d",
+    "pairs_sha256": "c7ed6293ab4d6efd7be451a66af698821bd01d80e1be3d481b8444b5b6bfe74c",
+    "candidate_pairs": 57935,
+    "ambiguous_pairs": 2001,
+    "status": "unverified candidates; excluded from supervised negatives"
+  },
+  "checkpoints": {
+    "base_siglip2_sha256": "ed72c0ace85020ae610fc817c2538b9cae5a477b012a50859c60af5b3ad30857",
+    "detector_sha256": "67b4c43518a07d8aa505b906296217e541779af0a488c4d92330ea3425087104",
+    "adapter_ce_sha256": "b6b3b64634ae6342e1ef51ad6d5788bc90f5711205f814cec95bc06497ff1420",
+    "adapter_margin_sha256": "39d9c46e1959690819f61523bb760874759293473dc5a18180959af6a0ab9123",
+    "reranker_visual_sha256": "4445595439a0eda893b1a13965b1138c74cf1f11f0370b76c954784d85629b8b",
+    "reranker_ocr_sha256": "114ffe277af1e79b585e2295671df5b7b91b7c184de3949cbd3a737d11ba88d1"
+  },
+  "reports": {
+    "detector_sha256": "dc2d0510c7d417ce7f57df7946f1ee5fb8f50a7e9a00a58c1bae197fd48b5451",
+    "retrieval_sha256": "cba0c1323695d7c6b20e945439ece896bf790681d129a46a3f4bfe563cd73fc6",
+    "latency_sha256": "979635050988ff3a23386701301fba0a9c49ce45899198a5c2a876a1bd135aa4"
+  },
+  "training_git_revision": "cacba8a159d404cfeab1af199d9f8bb0ba77f322",
+  "retrieval_eval_git_revision": "cacba8a159d404cfeab1af199d9f8bb0ba77f322",
+  "limitations": [
+    "No source capture-session IDs",
+    "Norwegian retrieval uses oracle product boxes",
+    "Official and personal store photos were quarantined"
+  ]
+}
