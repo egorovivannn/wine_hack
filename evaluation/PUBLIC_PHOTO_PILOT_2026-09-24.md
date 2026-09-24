@@ -35,6 +35,17 @@
 
 На Norwegian CE потерял четыре baseline Top-20 кандидата и добавил два. Поэтому адаптер без сохранения baseline-кандидатов не включён. Полный вид, детекторный crop и OCR-текст на реальных **российских** фото сравнить статистически нельзя: найденная точная пара одна и она студийная. Широкий подбор OCR-порогов или новых heads по ней запрещён этим протоколом. Внешний test повторно не запускался для выбора конфигурации. API, включая JSON-контракт, не изменён.
 
+Дополнительная абляция на 864 **WineSensed validation** query сравнила три вида одного исходного фото с одинаковым frozen gallery из 1 981 эталонных label-crop. Исходные JPEG проверены по SHA; полный и центральный виды повторно закодированы тем же SigLIP2, детекторный вид взят из прежнего проверенного кэша. Винодельни и near-duplicate группы не пересекают split по протоколу внешней итерации.
+
+| Вид query | Top-1 | Hit@5 | Recall@20 |
+| --- | ---: | ---: | ---: |
+| Детекторная этикетка | 692 | 822 | **844** |
+| Полный кадр | 677 | 820 | 841 |
+| Центральный crop | 705 | 827 | **844** |
+| 0,35 полный + 0,65 центральный | **711** | **831** | 843 |
+
+Объединение детекторного и смешанного Top-20 до 40 кандидатов даёт 848/864. Это согласуется с гипотезой, что несколько видов помогают candidate recall, но использует внешний WineSensed, а не российскую полку, и одну label-crop gallery вместо полной API-галереи. Смешанный вид без объединения уже теряет одного кандидата в Recall@20. Для Norwegian Grocery прежний OCR-реранкер на validation не превзошёл visual-only (262/317); OCR читался из 384px oracle bbox, поэтому перенос на мелкий русский винтаж не доказан. На единственной подтверждённой российской паре OCR в API не включился, так как visual margin был достаточен. Новые веса, пороги и API не менялись.
+
 ## Воспроизведение и проверка
 
 ```bash
@@ -49,9 +60,16 @@ uv run --locked python -m evaluation.analyze_candidate_union \
   --features data/external/external_v3/features.npz \
   --head data/models/training/external_adapter_ce_v3/best.pt \
   --split val --output data/evaluation/candidate_union_val_2026-09-24.json
+uv run --locked python -m evaluation.compare_external_wine_views \
+  --views data/external/external_v3/views.jsonl \
+  --features data/external/external_v3/features.npz \
+  --wine-manifest data/external/winesensed/sample_v3_clean/manifest.csv \
+  --split val --output data/evaluation/external_wine_view_ablation_val_2026-09-24.json
 ```
 
 `audit_public_photos` отказывается перезаписать существующий raw JSONL. Сайты могут измениться; сохранённые SHA фиксируют именно этот снимок. Оригинальные веб-фотографии и эталоны остаются вне Git. Ручные решения фиксируются в [`manifests/catalog_public_photo_decisions_2026-09-24.tsv`](manifests/catalog_public_photo_decisions_2026-09-24.tsv).
+
+SHA-256 локальных внешних диагностик: candidate union `1f213927aaed55963b11de95a9ea7d57690ffeb8d790cfda91b3df95f0881133`; WineSensed views `e6157f91be4ff01634e14a2df22c82275e0f934d37c635e210be87b4eaea1f6f`. Оба JSON находятся в игнорируемом `data/evaluation/`.
 
 SHA-256: выборка `efb096d88ec30bd204878530026d249d946d5f82be190a50ec01e9daf28c26f3`; сырая выдача `0820032a5a4a8a1099a249c88a1718063055aa982f6470d33d21f6fced8aa0db`; аудит `e2304abb08299067ca9b53c86ef6c7264e41422e99d24d0225201846cee8c448`; решения `2b37424229d6cecd700e38a30c63294dc9a402f3935860b5935396bdee6b970e`; ревью `1921af78238d7c6e203d6be81868ea2895e70d0e6349ece6ab151f34b6463e1d`; каталог `5654d67ef71dfd3462aad1a00d949f5f5465a4c30f63667b95f388d68289a21d`; индекс `88af9e5dabefbcceb02b24b36cf4c31d8e46e36cea3de5363c6acf7b10c4bd4f`; SigLIP2 `ed72c0ace85020ae610fc817c2538b9cae5a477b012a50859c60af5b3ad30857`; CE-head `b6b3b64634ae6342e1ef51ad6d5788bc90f5711205f814cec95bc06497ff1420`. Устройство: RTX 3080 (10 GiB), Ryzen 5 5600, ≈55 GiB доступной RAM до запуска; Python 3.12.3.
 
