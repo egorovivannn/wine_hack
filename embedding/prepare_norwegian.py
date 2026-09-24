@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import time
 from collections import Counter, defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -37,6 +38,30 @@ def stable_split(key: str) -> str:
     return "test" if value < 0.15 else "val" if value < 0.30 else "train"
 
 
+def assign_scene_splits(
+    component_sizes: Counter, seed: int = 42
+) -> tuple[dict[str, str], Counter]:
+    ordered = sorted(
+        component_sizes,
+        key=lambda group: (
+            -component_sizes[group],
+            hashlib.sha256(f"{group}:{seed}".encode()).hexdigest(),
+        ),
+    )
+    assignments = {}
+    sizes = Counter()
+    for group in ordered:
+        if sizes["train"] < 0.70 * sum(component_sizes.values()):
+            split = "train"
+        else:
+            split = "val" if sizes["val"] <= sizes["test"] else "test"
+        assignments[group] = split
+        sizes[split] += component_sizes[group]
+    if set(assignments.values()) != {"train", "val", "test"}:
+        raise ValueError("Scene components cannot form three nonempty splits")
+    return assignments, sizes
+
+
 def exact_joins(categories: list[dict], products: list[dict]) -> dict[int, dict]:
     by_name = defaultdict(list)
     for product in products:
@@ -50,7 +75,12 @@ def exact_joins(categories: list[dict], products: list[dict]) -> dict[int, dict]
 
 
 def fetch_file(
-    revision: str, remote_path: str, root: Path, size: int | None = None
+    revision: str,
+    remote_path: str,
+    root: Path,
+    size: int | None = None,
+    reuse_root: Path | None = None,
+    reuse_sha256: str | None = None,
 ) -> dict:
     path = root / remote_path
     if path.exists():
@@ -62,6 +92,19 @@ def fetch_file(
             "bytes": path.stat().st_size,
         }
     path.parent.mkdir(parents=True, exist_ok=True)
+    if reuse_root is not None:
+        reusable = reuse_root / remote_path
+        if reusable.exists():
+            if sha256(reusable) != reuse_sha256:
+                raise ValueError(f"Reused file SHA differs: {reusable}")
+            if size is not None and reusable.stat().st_size != size:
+                raise ValueError(f"Reused file size differs: {reusable}")
+            os.link(reusable, path)
+            return {
+                "path": remote_path,
+                "sha256": reuse_sha256,
+                "bytes": path.stat().st_size,
+            }
     url = f"https://huggingface.co/datasets/{REPO}/resolve/{revision}/{remote_path}"
     for attempt in range(5):
         try:
@@ -86,11 +129,34 @@ def main() -> None:
     parser.add_argument("--output", type=Path, default=Path("data/external/norwegian"))
     parser.add_argument("--revision", default=DEFAULT_REVISION)
     parser.add_argument("--workers", type=int, default=8)
+    parser.add_argument(
+        "--reuse-files",
+        type=Path,
+        help="Hardlink verified source files from another prepared version",
+    )
     args = parser.parse_args()
+    reuse_hashes = {}
+    if args.reuse_files:
+        source_report = json.loads((args.reuse_files / "provenance.json").read_text())
+        if source_report["revision"] != args.revision:
+            parser.error("Reused files come from a different source revision")
+        reuse_hashes = {
+            row["path"]: row["sha256"]
+            for row in json.loads((args.reuse_files / "files.json").read_text())
+        }
     args.output.mkdir(parents=True, exist_ok=True)
     revision = args.revision
     essentials = ["train/annotations.json", "NM_NGD_product_images/metadata.json"]
-    records = [fetch_file(revision, path, args.output) for path in essentials]
+    records = [
+        fetch_file(
+            revision,
+            path,
+            args.output,
+            reuse_root=args.reuse_files,
+            reuse_sha256=reuse_hashes.get(path),
+        )
+        for path in essentials
+    ]
     annotations = json.loads((args.output / essentials[0]).read_text())
     metadata = json.loads((args.output / essentials[1]).read_text())
     joins = exact_joins(annotations["categories"], metadata["products"])
@@ -117,7 +183,15 @@ def main() -> None:
     ]
     with ThreadPoolExecutor(max_workers=args.workers) as pool:
         futures = [
-            pool.submit(fetch_file, revision, path, args.output, size)
+            pool.submit(
+                fetch_file,
+                revision,
+                path,
+                args.output,
+                size,
+                args.reuse_files,
+                reuse_hashes.get(path),
+            )
             for path, size in files
         ]
         for number, future in enumerate(as_completed(futures), 1):
@@ -153,6 +227,46 @@ def main() -> None:
         code: stable_split("product-" + reference_groups.find(code))
         for code in product_info
     }
+    # COCO has no capture-session field. Keep nearby numeric frames together,
+    # then join views of the same shelf by product co-occurrence and pHash.
+    scene_groups = Groups([str(image_id) for image_id in images])
+    blocks = defaultdict(list)
+    for image_id, image in images.items():
+        number = int(image["file_name"].split("_")[-1].split(".")[0])
+        blocks[number // 10].append(str(image_id))
+    for members in blocks.values():
+        for member in members[1:]:
+            scene_groups.union(members[0], member)
+    category_sets = defaultdict(set)
+    for annotation in annotations["annotations"]:
+        category_sets[annotation["image_id"]].add(annotation["category_id"])
+    scene_ids = sorted(images)
+    cooccurrence_links = 0
+    for position, first in enumerate(scene_ids):
+        for second in scene_ids[position + 1 :]:
+            left, right = category_sets[first], category_sets[second]
+            if left and right and len(left & right) / len(left | right) >= 0.8:
+                scene_groups.union(str(first), str(second))
+                cooccurrence_links += 1
+    scene_hashes = np.asarray(
+        [
+            perceptual_hash(
+                args.output / "train/images" / images[image_id]["file_name"]
+            )
+            for image_id in scene_ids
+        ],
+        dtype=np.uint64,
+    )
+    perceptual_links = 0
+    for first, second, _ in near_pairs(scene_hashes, threshold=15):
+        scene_groups.union(str(scene_ids[first]), str(scene_ids[second]))
+        perceptual_links += 1
+    scene_group_by_id = {
+        image_id: "scene-group-" + scene_groups.find(str(image_id))
+        for image_id in scene_ids
+    }
+    component_sizes = Counter(scene_group_by_id.values())
+    scene_splits, assigned = assign_scene_splits(component_sizes)
     rows = []
     for annotation in sorted(annotations["annotations"], key=lambda a: a["id"]):
         product = joins.get(annotation["category_id"])
@@ -173,9 +287,8 @@ def main() -> None:
         )
         if reference is None or reference not in digest_by_path:
             continue
-        scene_number = int(image["file_name"].split("_")[-1].split(".")[0])
-        scene_group = f"scene-block-{scene_number // 10}"
-        scene_split = stable_split(scene_group)
+        scene_group = scene_group_by_id[image["id"]]
+        scene_split = scene_splits[scene_group]
         product_split = product_splits[code]
         if scene_split != product_split:
             continue
@@ -215,6 +328,12 @@ def main() -> None:
     (args.output / "product_splits.json").write_text(
         json.dumps(product_splits, indent=2, sort_keys=True) + "\n"
     )
+    (args.output / "scene_groups.json").write_text(
+        json.dumps(scene_group_by_id, indent=2, sort_keys=True) + "\n"
+    )
+    (args.output / "scene_splits.json").write_text(
+        json.dumps(scene_splits, indent=2, sort_keys=True) + "\n"
+    )
     report = dict(
         source=f"https://huggingface.co/datasets/{REPO}",
         revision=revision,
@@ -224,9 +343,15 @@ def main() -> None:
         manifest_sha256=sha256(manifest),
         files_sha256=sha256(inventory),
         product_splits_sha256=sha256(args.output / "product_splits.json"),
+        scene_groups_sha256=sha256(args.output / "scene_groups.json"),
+        scene_splits_sha256=sha256(args.output / "scene_splits.json"),
         exact_category_joins=len(joins),
         pairs=len(rows),
         near_duplicate_reference_pairs=near_duplicate_pairs,
+        scene_cooccurrence_links=cooccurrence_links,
+        scene_perceptual_links=perceptual_links,
+        scene_components=len(set(scene_group_by_id.values())),
+        split_all_scenes=dict(assigned),
         split_pairs=dict(Counter(row["split"] for row in rows)),
         split_products={
             s: len({r["product_code"] for r in rows if r["split"] == s})
@@ -236,7 +361,7 @@ def main() -> None:
             s: len({r["scene"] for r in rows if r["split"] == s})
             for s in ("train", "val", "test")
         },
-        split_protocol="SHA256 product_code groups connected by reference pHash Hamming<=5, and ten-consecutive-image scene blocks; keep only equal split pairs. No source capture-session metadata.",
+        split_protocol="Product reference pHash Hamming<=5 groups use SHA256 split. Scene groups join ten-file blocks, category Jaccard>=0.8 and scene pHash Hamming<=15; whole groups assigned 70/15/15 by size with seed 42. Keep only matching product/scene split pairs. Source session metadata unavailable.",
     )
     (args.output / "provenance.json").write_text(
         json.dumps(report, ensure_ascii=False, indent=2) + "\n"

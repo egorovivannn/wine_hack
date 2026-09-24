@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import unittest
+from collections import Counter
 
 import numpy as np
 import pandas as pd
@@ -11,7 +12,7 @@ from PIL import Image
 
 from .clean_winesensed import clean, near_pairs
 from .external_views import box_crop
-from .prepare_norwegian import exact_joins, stable_split
+from .prepare_norwegian import assign_scene_splits, exact_joins, stable_split
 from .train_external_adapter import retrieval
 from .train_external_reranker import lexical_score, metrics, tokens
 
@@ -31,6 +32,14 @@ class ExternalDataTests(unittest.TestCase):
         ]
         self.assertEqual({0: products[0]}, exact_joins(categories, products))
         self.assertEqual(stable_split("product-a"), stable_split("product-a"))
+
+    def test_scene_components_are_never_split(self):
+        components = Counter({"same-shelf": 70, "other": 20, "val-a": 5, "test-a": 5})
+        assignments, sizes = assign_scene_splits(components)
+        self.assertEqual("train", assignments["same-shelf"])
+        self.assertEqual(set(assignments.values()), {"train", "val", "test"})
+        self.assertEqual(sum(sizes.values()), sum(components.values()))
+        self.assertEqual(assignments, assign_scene_splits(components)[0])
 
     def test_near_duplicate_classes_stay_together(self):
         frame = pd.DataFrame(
@@ -100,6 +109,11 @@ class ExternalDataTests(unittest.TestCase):
         self.assertEqual(0, metrics([example], lambda values: values[:, 0])["top1"])
         self.assertEqual(1, metrics([example], lambda values: values[:, 5])["top1"])
         json.dumps(metrics([example], lambda values: values[:, 5]))
+        missing = dict(example, truth=-1, identity="unseen")
+        measured = metrics([example, missing], lambda values: values[:, 5])
+        self.assertEqual(
+            (1, 1, 2), (measured["top1"], measured["recall20"], measured["queries"])
+        )
         self.assertGreater(
             lexical_score(
                 [{"text": "Evergood", "confidence": 0.9}],

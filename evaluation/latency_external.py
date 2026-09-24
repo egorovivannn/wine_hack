@@ -56,6 +56,27 @@ def main() -> None:
     wine_sources = (
         pd.read_csv(args.wine_manifest, dtype=str).set_index("sha256").path.to_dict()
     )
+    warm_wine = next(
+        row
+        for row in rows
+        if row["source"] == "winesensed"
+        and row["role"] == "query"
+        and row["split"] == "train"
+    )
+    warm_label, _ = detector_crop(
+        detector, decode_image(Path(wine_sources[warm_wine["source_sha256"]]))
+    )
+    encoder.encode([warm_label], batch_size=1)
+    warm_norwegian = next(
+        row
+        for row in rows
+        if row["source"] == "norwegian"
+        and row["role"] == "query"
+        and row["split"] == "train"
+    )
+    warm_crop = decode_image(args.views.parent / warm_norwegian["view"])
+    encoder.encode([warm_crop], batch_size=1)
+    reader.read(warm_crop)
     source_results = {}
     for source in ("winesensed", "norwegian"):
         gallery = np.array(
@@ -149,7 +170,7 @@ def main() -> None:
         head_sha256=sha256(args.head),
         reranker_sha256=sha256(args.reranker),
         gpu=torch.cuda.get_device_name(0) if torch.cuda.is_available() else "CPU",
-        method="Sequential warmed-process measurements; first query includes any remaining model warm-up; OCR on all Norwegian queries.",
+        method="Sequential warmed-process measurements. Wine detector stage includes disk read/decode and hash; Norwegian starts from an oracle crop. OCR runs on all Norwegian queries.",
     )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, indent=2) + "\n")

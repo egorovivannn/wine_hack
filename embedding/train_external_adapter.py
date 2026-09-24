@@ -69,6 +69,7 @@ def retrieval(
     source: str,
     split: str,
     head: LabelHead | None = None,
+    detailed: bool = False,
 ) -> dict:
     queries = np.array(
         [
@@ -101,7 +102,7 @@ def retrieval(
     order = np.argsort(-scores, axis=1, kind="stable")
     truth = np.array([r["identity"] for r in rows], dtype=object)
     matches = truth[gallery][order] == truth[queries, None]
-    return dict(
+    result = dict(
         queries=len(queries),
         gallery=len(gallery),
         classes=len(set(truth[gallery])),
@@ -109,6 +110,30 @@ def retrieval(
         hit5=int(matches[:, :5].any(axis=1).sum()),
         recall20=int(matches[:, :20].any(axis=1).sum()),
     )
+    if detailed:
+        errors = []
+        for number, query_index in enumerate(queries):
+            if matches[number, 0]:
+                continue
+            predicted = gallery[order[number, 0]]
+            truth_positions = np.flatnonzero(matches[number])
+            errors.append(
+                dict(
+                    view=rows[query_index]["view"],
+                    truth=rows[query_index]["identity"],
+                    predicted=rows[predicted]["identity"],
+                    truth_rank=int(truth_positions[0] + 1)
+                    if len(truth_positions)
+                    else None,
+                    same_known_winery=bool(
+                        rows[query_index].get("winery_id")
+                        and rows[query_index].get("winery_id")
+                        == rows[predicted].get("winery_id")
+                    ),
+                )
+            )
+        result["errors"] = errors
+    return result
 
 
 def train(

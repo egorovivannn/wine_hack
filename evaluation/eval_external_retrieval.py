@@ -52,11 +52,11 @@ def main() -> None:
     output = {}
     for split in args.splits:
         wine = {
-            name: retrieval(rows, vectors, "winesensed", split, model)
+            name: retrieval(rows, vectors, "winesensed", split, model, detailed=True)
             for name, model in (("frozen", None), ("adapter", head))
         }
         norwegian = {
-            name: retrieval(rows, vectors, "norwegian", split, model)
+            name: retrieval(rows, vectors, "norwegian", split, model, detailed=True)
             for name, model in (("frozen", None), ("adapter_full_gallery", head))
         }
         examples = build_examples(rows, vectors, head, ocr, split)
