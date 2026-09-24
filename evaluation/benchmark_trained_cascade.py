@@ -95,7 +95,7 @@ def main():
     mean, std = rerank_state["mean"], rerank_state["std"]
     bias = float(rerank_state["state_dict"]["bias"].item())
     with torch.no_grad():
-        projected_refs = head(torch.from_numpy(gallery.embeddings)).numpy()
+        projected_refs = head(torch.from_numpy(gallery.embeddings[:, 1])).numpy()
     orb = cv2.ORB_create(nfeatures=500, fastThreshold=12)
     matcher = cv2.BFMatcher(cv2.NORM_HAMMING)
     ref_cache = {}
@@ -111,22 +111,20 @@ def main():
         start = time.perf_counter()
         image = decode_image(path)
         label_image, detections = crop_label(detector, image)
-        full = query_views(image)[0]
-        query = encoder.encode([full, label_image], batch_size=2)
+        query = encoder.encode([label_image], batch_size=1)[0]
         with torch.no_grad():
             projected_query = head(torch.from_numpy(query)).numpy()
-        full_scores = gallery.embeddings[:, 0] @ query[0]
-        label_scores = gallery.embeddings[:, 1] @ query[1]
-        base_scores = .35*full_scores + .65*label_scores
+        label_scores = gallery.embeddings[:, 1] @ query
+        base_scores = label_scores
         order = np.argsort(-base_scores, kind="stable")[:20]
         visual_slugs = [slug for i in order for slug in gallery.image_slugs[i]][:5]
         candidate_slugs = [slug for i in order for slug in gallery.image_slugs[i]]
-        head_scores = .35*(projected_refs[:, 0] @ projected_query[0]) + .65*(projected_refs[:, 1] @ projected_query[1])
+        head_scores = projected_refs @ projected_query
         head_order = sorted(order, key=lambda i: -head_scores[i])
         head_slugs = [slug for i in head_order for slug in gallery.image_slugs[i]][:5]
         query_orb = orb_description(orb, label_image)
         label_base = label_scores[order]
-        label_head = projected_refs[order, 1] @ projected_query[1]
+        label_head = projected_refs[order] @ projected_query
         pair_features = []
         for rank, index in enumerate(order):
             pair_features.append([float(label_base[rank]), float(label_head[rank]),
