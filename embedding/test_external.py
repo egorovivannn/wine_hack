@@ -74,7 +74,7 @@ class ExternalDataTests(unittest.TestCase):
         self.assertEqual((384, 384), crop.size)
         self.assertEqual((255, 0, 0), crop.getpixel((192, 192)))
 
-    def test_retrieval_uses_full_gallery_and_exact_identity(self):
+    def test_retrieval_uses_eligible_gallery_and_exact_identity(self):
         rows = [
             dict(source="norwegian", role="reference", identity=key, split=split)
             for key, split in (("a", "train"), ("b", "val"), ("c", "test"))
@@ -84,7 +84,7 @@ class ExternalDataTests(unittest.TestCase):
             [[1.0, 0.0], [0.0, 1.0], [-1.0, 0.0], [0.0, 1.0]], dtype=np.float32
         )
         result = retrieval(rows, vectors, "norwegian", "val")
-        self.assertEqual(3, result["gallery"])
+        self.assertEqual(2, result["gallery"])
         self.assertEqual(1, result["top1"])
 
     def test_reranker_scores_truth_and_ocr(self):

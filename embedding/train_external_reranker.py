@@ -16,7 +16,7 @@ from rapidfuzz.fuzz import ratio
 from torch import nn
 from unidecode import unidecode
 
-from .train_external_adapter import load_data, sha256
+from .train_external_adapter import load_data, permitted_gallery_splits, sha256
 from .train_label_head import LabelHead
 
 FEATURES = (
@@ -71,7 +71,9 @@ def build_examples(
         [
             i
             for i, r in enumerate(rows)
-            if r["source"] == "norwegian" and r["role"] == "reference"
+            if r["source"] == "norwegian"
+            and r["role"] == "reference"
+            and r["split"] in permitted_gallery_splits(split)
         ]
     )
     queries = np.array(
@@ -84,7 +86,9 @@ def build_examples(
         ]
     )
     with torch.no_grad():
-        projected = head(torch.from_numpy(vectors)).numpy()
+        needed = np.union1d(gallery, queries)
+        projected = np.empty_like(vectors)
+        projected[needed] = head(torch.from_numpy(vectors[needed])).numpy()
     names = [rows[i]["product_name"] for i in gallery]
     frequency = Counter(word for name in names for word in tokens(name))
     examples = []
@@ -237,9 +241,21 @@ def fit(
                 ),
                 output,
             )
+    torch.save(
+        dict(
+            weights=model.weight.detach().numpy().ravel().copy(),
+            mean=mean,
+            std=std,
+            features=FEATURES[:feature_count],
+            epoch=150,
+            scale=scale,
+        ),
+        output.with_name(output.stem + "_last.pt"),
+    )
     return dict(
         best_val_top1=best,
         best_epoch=max(history, key=lambda r: r["val_top1"])["epoch"],
+        last_val_top1=history[-1]["val_top1"],
         train_queries=len(examples),
         train_positive_candidates=len(y),
         history=history,
@@ -312,7 +328,7 @@ def main() -> None:
                 frozen_groups[split], lambda v: v[:, 0] + 0.03 * v[:, 5]
             ),
         }
-        for name in ("visual", "ocr"):
+        for name in ("visual", "ocr", "visual_last", "ocr_last"):
             checkpoint = torch.load(
                 args.output / f"{name}.pt", map_location="cpu", weights_only=False
             )
@@ -325,6 +341,9 @@ def main() -> None:
         },
         checkpoint_sha256={
             name: sha256(args.output / f"{name}.pt") for name in ("visual", "ocr")
+        },
+        trained_last_checkpoint_sha256={
+            name: sha256(args.output / f"{name}_last.pt") for name in ("visual", "ocr")
         },
         views_sha256=sha256(args.views),
         features_sha256=sha256(args.features),

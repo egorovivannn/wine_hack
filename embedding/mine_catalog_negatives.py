@@ -132,6 +132,7 @@ def main() -> None:
         names_right = {" ".join(sorted(words(cards[slug]["name"]))) for slug in right}
         ambiguous = (
             bool(names_left & names_right)
+            or bool(set(left) & set(right))
             or manifest["images"][i]["sha256"] == manifest["images"][j]["sha256"]
         )
         rows.append(
@@ -152,6 +153,7 @@ def main() -> None:
     )
     report = dict(
         catalog_images=len(index.filenames),
+        multi_slug_references=sum(len(slugs) > 1 for slugs in index.image_slugs),
         candidate_pairs=len(rows),
         ambiguous_pairs=sum(r["ambiguous"] for r in rows),
         unambiguous_pairs=sum(not r["ambiguous"] for r in rows),

@@ -23,6 +23,9 @@ def main() -> None:
     parser.add_argument("--reranker-dir", type=Path, required=True)
     parser.add_argument("--ocr", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument(
+        "--splits", nargs="+", choices=("val", "test"), default=["val", "test"]
+    )
     args = parser.parse_args()
     if args.output.exists():
         parser.error("Output exists")
@@ -47,7 +50,7 @@ def main() -> None:
         raise ValueError("OCR cache provenance differs")
     ocr = {r["view"]: r["lines"] for r in ocr_records}
     output = {}
-    for split in ("val", "test"):
+    for split in args.splits:
         wine = {
             name: retrieval(rows, vectors, "winesensed", split, model)
             for name, model in (("frozen", None), ("adapter", head))
@@ -68,7 +71,7 @@ def main() -> None:
                 "adapter_top20": metrics(examples, lambda v: v[:, 1]),
             }
         )
-        for name in ("visual", "ocr"):
+        for name in ("visual", "ocr", "visual_last", "ocr_last"):
             checkpoint = torch.load(
                 args.reranker_dir / f"{name}.pt", map_location="cpu", weights_only=False
             )
@@ -84,6 +87,8 @@ def main() -> None:
             "adapter": sha256(args.head),
             "reranker_visual": sha256(args.reranker_dir / "visual.pt"),
             "reranker_ocr": sha256(args.reranker_dir / "ocr.pt"),
+            "reranker_visual_last": sha256(args.reranker_dir / "visual_last.pt"),
+            "reranker_ocr_last": sha256(args.reranker_dir / "ocr_last.pt"),
         },
         ocr_sha256=sha256(args.ocr),
         git_revision=subprocess.check_output(
@@ -93,7 +98,7 @@ def main() -> None:
         torch=torch.__version__,
         gpu=torch.cuda.get_device_name(0) if torch.cuda.is_available() else "CPU",
         split_protocol="Wine vintage/known winery/near duplicate group disjoint; Norwegian product and source scene-block disjoint. Wine capture sessions unavailable.",
-        gallery_policy="All external reference classes of each source, including held-out distractors, for every compared method.",
+        gallery_policy="Same eligible gallery per split and method: train only; train+val; full train+val+test.",
     )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, indent=2) + "\n")

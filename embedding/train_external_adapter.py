@@ -21,6 +21,16 @@ def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def permitted_gallery_splits(split: str) -> set[str]:
+    if split == "train":
+        return {"train"}
+    if split == "val":
+        return {"train", "val"}
+    if split == "test":
+        return {"train", "val", "test"}
+    raise ValueError(split)
+
+
 def load_data(views: Path, features: Path) -> tuple[list[dict], np.ndarray]:
     rows = [json.loads(line) for line in views.read_text().splitlines()]
     with np.load(features) as saved:
@@ -73,7 +83,9 @@ def retrieval(
         [
             i
             for i, row in enumerate(rows)
-            if row["source"] == source and row["role"] == "reference"
+            if row["source"] == source
+            and row["role"] == "reference"
+            and row["split"] in permitted_gallery_splits(split)
         ]
     )
     device = next(head.parameters()).device if head is not None else torch.device("cpu")
