@@ -509,6 +509,7 @@
         const response = await fetch(`/v1/sommelier?${params}`);
         if (!response.ok) throw new Error();
         const data = await response.json();
+        if (first && data.note) bubble(data.note);
         if (first) bubble(data.total ? `Нашёл ${data.total} ${plural(data.total, 'вино', 'вина', 'вин')} разных виноделен. Вот лучшие:` :
                                       'Под такие ответы в каталоге ничего не нашлось. Попробуйте ответить «Не важно» на один из вопросов.');
         const list = $('picks'); list.replaceChildren();

@@ -56,6 +56,16 @@ class RecommendTests(unittest.TestCase):
         sparkling = self.recommender.sommelier(color="sparkling")["picks"]
         self.assertEqual([item["slug"] for item in sparkling], ["brut-e"])
 
+    def test_sommelier_never_returns_empty_when_style_exists(self):
+        # No rosé in the catalog is recommended for seafood: rank by style and say so.
+        result = self.recommender.sommelier(dish="seafood", color="rose")
+        self.assertEqual([item["slug"] for item in result["picks"]], ["rose-d"])
+        self.assertIn("Прямых рекомендаций", result["note"])
+        # No sweet sparkling wine: drop the sweetness filter and explain.
+        relaxed = self.recommender.sommelier(color="sparkling", sweetness="sweet")
+        self.assertEqual([item["slug"] for item in relaxed["picks"]], ["brut-e"])
+        self.assertIn("без учёта сладости", relaxed["note"])
+
     def test_sommelier_rejects_unknown_answers(self):
         with self.assertRaises(ValueError):
             self.recommender.sommelier(dish="pizza")

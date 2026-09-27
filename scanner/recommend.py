@@ -29,6 +29,13 @@ STOP = set("""вино вина вином винограда виноград �
 идеально сочетается сочетания сочетание блюдам блюдами блюда блюд выдержка выдержки выдержано
 выдерживается бочках бочке дубовых дубе нержавеющей стали ферментация урожая урожай производства
 собранного собранный ручной ручного свежий свежие свежее свежая""".split())
+TYPICAL = {
+    "fish": "белое сухое или игристое брют", "seafood": "белое сухое или игристое брют",
+    "poultry": "белое или розовое", "red_meat": "сухое красное", "vegetables": "розовое или белое",
+    "cheese": "красное, оранжевое или сладкое", "dessert": "сладкое или полусладкое", "spicy": "полусладкое белое или розовое",
+}
+COLOR_PHRASE = {"red": "среди красных", "white": "среди белых", "rose": "среди розовых",
+                "orange": "среди оранжевых", "sparkling": "среди игристых"}
 DISH_WORDS = {
     "fish": ("рыб",), "seafood": ("морепродукт", "устриц", "мидии", "креветк"),
     "poultry": ("птиц", "куриц", "утк", "индейк"), "red_meat": ("мяс", "стейк", "говяд", "баранин", "дичь", "шашлык"),
@@ -157,18 +164,42 @@ class Recommender:
             raise ValueError(f"Unknown sweetness: {sweetness}")
         if like is not None and like not in self.profiles:
             raise ValueError(f"Unknown wine: {like}")
-        wanted = {"dry": {"сухое"}, "semi": {"полусухое", "полусладкое"}, "sweet": {"полусладкое", "сладкое"}}
         base = self.profiles[like] if like else None
+        notes = []
+        scored = self._score(dish, color, sweetness, like, base)
+        if not scored and sweetness:
+            # e.g. no sweet sparkling in the catalog: keep the colour, drop the sweetness filter.
+            scored = self._score(dish, color, None, like, base)
+            if scored:
+                notes.append(f"Вин с такой сладостью {COLOR_PHRASE.get(color, 'в каталоге')} нет — "
+                             "показываю ближайшие без учёта сладости.")
+        if dish and scored and not any(strong for _, _, _, strong in scored):
+            notes.append(f"Прямых рекомендаций к блюду «{DISHES[dish].lower()}» среди таких вин нет; "
+                         f"к нему обычно берут {TYPICAL[dish]}. Вот ближайшие по стилю.")
+        scored.sort(key=lambda item: (-item[0], item[1]))
+        picks, wineries = [], set()
+        for score, slug, reasons, _ in scored:
+            winery = self.profiles[slug].winery
+            if winery in wineries:
+                continue
+            wineries.add(winery)
+            picks.append({"slug": slug, "card": self.cards[slug], "score": round(score, 4),
+                          "reasons": reasons or ["подходит под ваши ответы"]})
+        return {"total": len(picks), "picks": picks[offset:offset + limit], "note": " ".join(notes) or None}
+
+    def _score(self, dish, color, sweetness, like, base) -> list[tuple[float, str, list[str], bool]]:
+        """Colour and sweetness filter; dish fit and likeness only rank."""
+        wanted = {"dry": {"сухое"}, "semi": {"полусухое", "полусладкое"}, "sweet": {"полусладкое", "сладкое"}}
         scored = []
         for slug, profile in self.profiles.items():
             card = self.cards[slug]
-            if card.get("reference_available") in (False, "False"):
+            if slug == like or card.get("reference_available") in (False, "False"):
                 continue
             if color == "sparkling" and not profile.sparkling:
                 continue
             if color in COLORS and (profile.color != color or profile.sparkling):
                 continue
-            score, reasons = 0.0, []
+            score, reasons, strong = 0.0, [], not dish
             if sweetness:
                 level = profile.sweetness or (None if profile.sparkling else "сухое")
                 if level not in wanted[sweetness]:
@@ -178,30 +209,20 @@ class Recommender:
                 pairing = recommend_pairings(card, dish)["selected"]
                 fit = {"хорошо подходит": 3.0, "можно попробовать": 1.5}.get(pairing["fit"], 0.0)
                 mentions = any(stem in card.get("description", "").lower() for stem in DISH_WORDS[dish])
-                if not fit and not mentions:
-                    continue
                 score += fit + 2.0 * mentions
-                reasons.append(f"описание советует: {DISHES[dish].lower()}" if mentions
-                               else f"{DISHES[dish].lower()}: {pairing['fit']}")
-            if base is not None and slug != like:
+                strong = fit >= 1.5 or mentions
+                if mentions:
+                    reasons.append(f"описание советует: {DISHES[dish].lower()}")
+                elif fit:
+                    reasons.append(f"{DISHES[dish].lower()}: {pairing['fit']}")
+            if base is not None:
                 text, _ = self._text_similarity(base, profile)
                 union = base.grapes | profile.grapes
                 common = sorted(base.grapes & profile.grapes)
                 score += 3 * text + 2 * (len(common) / len(union) if union else 0)
                 if common:
                     reasons.append("тот же сорт: " + ", ".join(common[:2]))
-            elif slug == like:
-                continue
             # Prefer richer cards: a longer description gives the user more to read.
             score += min(len(card.get("description", "")), 600) / 1200
-            scored.append((score, slug, reasons))
-        scored.sort(key=lambda item: (-item[0], item[1]))
-        picks, wineries = [], set()
-        for score, slug, reasons in scored:
-            winery = self.profiles[slug].winery
-            if winery in wineries:
-                continue
-            wineries.add(winery)
-            picks.append({"slug": slug, "card": self.cards[slug], "score": round(score, 4),
-                          "reasons": reasons or ["подходит под ваши ответы"]})
-        return {"total": len(picks), "picks": picks[offset:offset + limit]}
+            scored.append((score, slug, reasons, strong))
+        return scored
