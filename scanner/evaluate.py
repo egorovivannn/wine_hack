@@ -18,7 +18,7 @@ from .catalog import ROOT, sha256_file
 from .labels import read_labels
 from .server import SearchEngine
 from .ocr import MODEL_DIR as DEFAULT_OCR_MODEL_DIR, MODEL_SHA256 as OCR_MODEL_SHA256
-from .verifier import DEFAULT_MODEL_DIR as DEFAULT_VERIFIER_DIR
+from .verifier import CANDIDATES as VERIFIER_CANDIDATES, DEFAULT_MODEL_DIR as DEFAULT_VERIFIER_DIR
 from .vision import DEFAULT_INDEX, DEFAULT_MANIFEST, DEFAULT_MODEL_DIR
 
 
@@ -129,11 +129,14 @@ def main() -> None:
     parser.add_argument("--use-verifier", action="store_true")
     parser.add_argument("--verifier-dir", type=Path, default=DEFAULT_VERIFIER_DIR)
     parser.add_argument("--device", choices=["cuda", "cpu"])
+    parser.add_argument("--verifier-candidates", type=int, default=VERIFIER_CANDIDATES)
+    parser.add_argument("--verifier-center-crop", action="store_true")
     args = parser.parse_args()
     engine = SearchEngine(args.manifest, args.index, args.model_dir, args.catalog_images_dir,
                           use_ocr=args.use_ocr, ocr_model_dir=args.ocr_model_dir,
                           use_verifier=args.use_verifier, verifier_dir=args.verifier_dir,
-                          device=args.device)
+                          device=args.device, verifier_candidates=args.verifier_candidates,
+                          verifier_center_crop=args.verifier_center_crop)
     print(json.dumps(evaluate(args.images_dir, args.output, args.labels, engine,
                               args.index, args.manifest), ensure_ascii=False))
 

@@ -22,7 +22,7 @@ from .ocr import (MODEL_DIR as DEFAULT_OCR_MODEL_DIR, OCRReader, OCRReranker,
                   OCR_WEIGHT, VISUAL_MARGIN_FOR_OCR)
 from .pairing import recommend_pairings
 from .verifier import (CANDIDATES, DEFAULT_MODEL_DIR as DEFAULT_VERIFIER_DIR,
-                       reference_thumbnail)
+                       DEFAULT_THUMBNAIL_DIR, reference_thumbnail, sweetness)
 from .vision import (DEFAULT_INDEX, DEFAULT_MANIFEST, DEFAULT_MODEL_DIR,
                      VisionEncoder, load_index)
 
@@ -41,9 +41,14 @@ class SearchEngine:
                  images_dir: Path, use_ocr: bool = False,
                  ocr_model_dir: Path = DEFAULT_OCR_MODEL_DIR,
                  use_verifier: bool = False, verifier_dir: Path = DEFAULT_VERIFIER_DIR,
-                 device: str | None = None):
+                 device: str | None = None, verifier_candidates: int = CANDIDATES,
+                 verifier_center_crop: bool = False):
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         self.cards = {card["slug"]: card for card in manifest["cards"]}
+        for card in self.cards.values():
+            # Near-duplicate cards often differ only in sweetness; show it to the user too.
+            found = sweetness(card)
+            card["sweetness"] = None if found == "не указана" else found
         self.images_dir = images_dir
         self.gallery = load_index(index_path, manifest_path)
         index_metadata = json.loads(index_path.with_suffix(".json").read_text())
@@ -54,10 +59,12 @@ class SearchEngine:
         self.ocr_reader = OCRReader(self.ocr_model_dir) if use_ocr else None
         self.ocr_reranker = OCRReranker(self.cards) if use_ocr else None
         self.verifier = None
+        self.candidates = verifier_candidates if use_verifier else CANDIDATES
         if use_verifier:
             from .verifier import CandidateVerifier
             self.verifier = CandidateVerifier(self.cards, images_dir, verifier_dir,
-                                              device=device)
+                                              device=device, candidates=verifier_candidates,
+                                              center_crop=verifier_center_crop)
         self.lock = Lock()
 
     @classmethod
@@ -88,6 +95,14 @@ class SearchEngine:
         path = self.images_dir / card["image_name"]
         return path if path.is_file() else None
 
+    def get_thumbnail_path(self, slug: str) -> Path | None:
+        """512 px copy of the reference for phones; catalog originals reach several MB."""
+        path = self.get_image_path(slug)
+        if path is None:
+            return None
+        reference_thumbnail(self.images_dir, path.name)
+        return DEFAULT_THUMBNAIL_DIR / f"{path.name}.png"
+
     def warm_up(self) -> None:
         """Run one catalog image through the pipeline so the first real request is not slow."""
         card = next((card for card in self.cards.values()
@@ -105,7 +120,7 @@ class SearchEngine:
         with self.lock:
             vectors = self.encoder.encode(views)
             ranked = self.gallery.search(vectors, top_k=20)
-            final = np.array([item.score for item in ranked[:CANDIDATES]])
+            final = np.array([item.score for item in ranked[:self.candidates]])
             if self.verifier is not None:
                 ranked, final = self.verifier.rerank(image, ranked, self._reference)
                 verifier_used = True
@@ -116,7 +131,7 @@ class SearchEngine:
         if ocr_used:
             ranked = self.ocr_reranker.rerank(ranked, lines)
             final = np.array([item.score + OCR_WEIGHT * self.ocr_reranker.lexical_score(lines, item.slug)
-                              for item in ranked[:CANDIDATES]])
+                              for item in ranked[:self.candidates]])
         ranked = ranked[:6]
         first = ranked[0]
         top = ranked[:len(final)]
@@ -130,7 +145,7 @@ class SearchEngine:
             "verdict": "confident" if confidence >= CONFIDENT_THRESHOLD else "check_alternatives",
             "top5": [{"slug": item.slug, "probability": float(probability),
                       "score": float(score)}
-                     for item, probability, score in zip(top, probabilities, final)],
+                     for item, probability, score in zip(top[:5], probabilities, final)],
             "visual_similarity": first.score,
             "margin_to_second": float(final[0] - final[1]) if len(final) > 1 else None,
             "ocr_used": ocr_used,
@@ -198,6 +213,13 @@ def create_app(engine: SearchEngine | None = None) -> FastAPI:
         if path is None:
             raise HTTPException(status_code=404, detail="Image unavailable")
         return FileResponse(path)
+
+    @app.get("/v1/wines/{slug}/thumbnail")
+    def get_wine_thumbnail(slug: str):
+        path = app.state.engine.get_thumbnail_path(slug)
+        if path is None:
+            raise HTTPException(status_code=404, detail="Image unavailable")
+        return FileResponse(path, headers={"Cache-Control": "public, max-age=86400"})
 
     @app.get("/", include_in_schema=False)
     def home():

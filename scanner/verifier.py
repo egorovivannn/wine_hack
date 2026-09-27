@@ -28,11 +28,15 @@ MODEL_SHA256 = {
     "model.safetensors-00002-of-00002.safetensors":
         "cb544bd9bfae93dc59b0f22b292f5933573854a7f9b97835c67060d7d910e188",
 }
-CANDIDATES = 5
+# Seven recovers a card ranked sixth or seventh visually; nine made the choice harder.
+CANDIDATES = 7
 # Final score = visual cosine + VERIFIER_WEIGHT * log P(candidate). Chosen on the official
 # photos (plateau 0.015-0.03), so it is a development setting, not a held-out estimate.
 VERIFIER_WEIGHT = 0.02
 QUERY_SIDE = 1024
+# Optional second, enlarged view of the frame centre for shelves with similar neighbours.
+CENTER_CROP = False
+CENTER_BOX = (0.2, 0.15, 0.8, 0.85)
 REFERENCE_SIDE = 512
 SWEETNESS = (
     ("полусух", "полусухое"), ("polusuh", "полусухое"), ("p_suh", "полусухое"),
@@ -81,11 +85,19 @@ def reference_thumbnail(images_dir: Path, filename: str,
 
 
 class CandidateVerifier:
+    candidates = CANDIDATES
+    center_crop = CENTER_CROP
+
     def __init__(self, cards: dict[str, dict], images_dir: Path,
                  model_dir: Path = DEFAULT_MODEL_DIR, verify_hashes: bool = True,
-                 device: str | None = None):
+                 device: str | None = None, candidates: int = CANDIDATES,
+                 center_crop: bool = CENTER_CROP):
         from transformers import AutoModelForImageTextToText, AutoProcessor, BitsAndBytesConfig
 
+        if not 2 <= candidates <= 9:
+            raise ValueError("Candidate numbers must be single digits")
+        self.candidates = candidates
+        self.center_crop = center_crop
         model_dir = Path(model_dir)
         if verify_hashes:
             self.verify_weights(model_dir)
@@ -108,7 +120,7 @@ class CandidateVerifier:
         self.prefix = tokenizer("Кандидат ", add_special_tokens=False,
                                 return_tensors="pt")["input_ids"]
         self.digit_ids = [tokenizer.convert_tokens_to_ids(str(number))
-                          for number in range(1, CANDIDATES + 1)]
+                          for number in range(1, self.candidates + 1)]
 
     @staticmethod
     def verify_weights(model_dir: Path) -> None:
@@ -121,6 +133,13 @@ class CandidateVerifier:
                   references: list[Image.Image]) -> list[dict]:
         content = [{"type": "text", "text": "Фото покупателя (целевая бутылка — в центре кадра):"},
                    {"type": "image", "image": _thumbnail(image, QUERY_SIDE)}]
+        if self.center_crop:
+            width, height = image.size
+            left, top, right, bottom = CENTER_BOX
+            crop = image.crop((round(left * width), round(top * height),
+                               round(right * width), round(bottom * height)))
+            content += [{"type": "text", "text": "Крупно центр того же фото (целевая бутылка):"},
+                        {"type": "image", "image": _thumbnail(crop, QUERY_SIDE)}]
         for number, (candidate, reference) in enumerate(zip(candidates, references), 1):
             content += [{"type": "text",
                          "text": f"Кандидат {number}: {describe(self.cards[candidate.slug])}"},
@@ -154,14 +173,14 @@ class CandidateVerifier:
     def rerank(self, image: Image.Image, ranked: list[Candidate],
                load_reference) -> tuple[list[Candidate], np.ndarray]:
         """Return candidates sorted by fused score and the fused scores of the first K."""
-        head = ranked[:CANDIDATES]
+        head = ranked[:self.candidates]
         if len(head) < 2:
             return ranked, np.array([candidate.score for candidate in head])
         log_probs = self.log_probabilities(
             image, head, [load_reference(candidate) for candidate in head])
         fused = np.array([candidate.score for candidate in head]) + VERIFIER_WEIGHT * log_probs
         order = np.argsort(-fused, kind="stable")
-        return [head[i] for i in order] + ranked[CANDIDATES:], fused[order]
+        return [head[i] for i in order] + ranked[self.candidates:], fused[order]
 
 
 def download(model_dir: Path) -> None:

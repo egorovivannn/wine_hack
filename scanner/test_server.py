@@ -31,6 +31,9 @@ class FakeEngine:
     def get_image_path(self, slug):
         return self.image_path if slug in self.cards else None
 
+    def get_thumbnail_path(self, slug):
+        return self.get_image_path(slug)
+
 
 class ServerTests(unittest.TestCase):
     def setUp(self):
@@ -47,6 +50,10 @@ class ServerTests(unittest.TestCase):
             self.assertEqual(response.json(), {"slug": "verified-slug"})
             self.assertEqual(client.get("/v1/wines/verified-slug").status_code, 200)
             self.assertEqual(client.get("/v1/wines/verified-slug/image").status_code, 200)
+            thumbnail = client.get("/v1/wines/verified-slug/thumbnail")
+            self.assertEqual(thumbnail.status_code, 200)
+            self.assertIn("max-age", thumbnail.headers["cache-control"])
+            self.assertEqual(client.get("/v1/wines/missing/thumbnail").status_code, 404)
             pairing = client.get("/v1/wines/verified-slug/pairings", params={"dish": "fish"})
             self.assertEqual(pairing.status_code, 200)
             self.assertEqual(pairing.json()["selected"]["dish"], "fish")

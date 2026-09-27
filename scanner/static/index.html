@@ -2,206 +2,421 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#351044">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#FDF9ED">
   <title>Сканер | Своё Вино</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet">
   <style>
-    :root { color-scheme: light; --ink: #291837; --purple: #351044; --violet: #783a91;
-      --rose: #e9d4e8; --paper: #faf7f8; --line: #e7dfe9; --muted: #685c6d; }
-    * { box-sizing: border-box; }
-    body { margin: 0; background: var(--paper); color: var(--ink);
-      font: 16px/1.48 system-ui, -apple-system, "Segoe UI", sans-serif; }
-    button, input, textarea { font: inherit; }
-    button { cursor: pointer; }
-    button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid #bb7bc9; outline-offset: 2px; }
-    header { background: var(--purple); color: #fff; padding: 18px max(20px, calc((100vw - 940px)/2)); }
-    .brand { font-weight: 800; letter-spacing: .01em; font-size: 19px; }
-    .brand small { display: block; font-weight: 500; font-size: 12px; color: #e9d4e8; }
-    main { max-width: 940px; margin: 0 auto; padding: 24px 20px 54px; }
-    h1 { font-size: clamp(30px, 5vw, 46px); line-height: 1.08; margin: 8px 0 14px; letter-spacing: -.035em; }
-    h2 { margin: 0 0 14px; font-size: 26px; line-height: 1.18; }
-    h3 { margin: 0 0 8px; font-size: 18px; }
-    p { margin: 0 0 16px; }
-    .lead { color: var(--muted); max-width: 53ch; }
-    .tabs { display: flex; gap: 8px; margin: 24px 0; }
-    .tab { border: 1px solid var(--line); border-radius: 999px; background: #fff;
-      color: var(--purple); padding: 9px 17px; font-weight: 650; }
-    .tab[aria-selected="true"] { background: var(--purple); border-color: var(--purple); color: #fff; }
-    .panel { background: white; border: 1px solid var(--line); border-radius: 22px; padding: 24px;
-      box-shadow: 0 15px 45px rgba(41,24,55,.055); }
-    .upload { border: 2px dashed #c6aacb; border-radius: 17px; padding: 30px 22px;
-      background: #fcf9fc; text-align: center; }
-    .upload strong { display: block; font-size: 19px; margin-bottom: 5px; }
-    .upload span { color: var(--muted); display: block; margin-bottom: 16px; }
-    .upload input { width: 100%; max-width: 310px; font-size: 14px; }
-    .primary { border: 0; border-radius: 12px; background: var(--purple); color: white;
-      padding: 12px 22px; font-weight: 700; min-height: 46px; }
-    .primary:hover { background: #562064; }
-    .primary:disabled { opacity: .55; cursor: wait; }
-    .secondary { border: 1px solid #bfa9c6; border-radius: 12px; background: white;
-      color: var(--purple); padding: 11px 19px; font-weight: 650; min-height: 46px; }
-    .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
-    .status { min-height: 25px; margin-top: 14px; color: var(--muted); }
-    .status.error { color: #a42445; }
-    .wine { display: grid; grid-template-columns: minmax(170px, 280px) 1fr; gap: 26px; align-items: start; }
-    .bottle { min-height: 310px; background: #f6f1f5; border-radius: 17px; display: grid;
-      place-items: center; padding: 15px; }
-    .bottle img { max-width: 100%; max-height: 340px; object-fit: contain; }
-    .eyebrow { color: var(--violet); font-size: 13px; font-weight: 750; text-transform: uppercase;
-      letter-spacing: .09em; margin-bottom: 8px; }
-    .facts { margin: 17px 0; display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; }
-    .fact { background: #f7f2f7; border-radius: 10px; padding: 10px 12px; }
-    .fact small { display: block; color: var(--muted); }
-    .fact strong { font-weight: 650; }
-    .description { max-width: 68ch; }
-    .diary-form { border-top: 1px solid var(--line); margin-top: 22px; padding-top: 20px; }
-    .diary-form label { display: block; font-weight: 650; margin-bottom: 8px; }
-    .diary-form textarea { width: 100%; min-height: 74px; border: 1px solid #c9b8cf;
-      border-radius: 10px; padding: 11px; resize: vertical; }
-    .saved-list { display: grid; gap: 12px; }
-    .saved-item { border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
-    .saved-item p { color: var(--muted); white-space: pre-wrap; margin: 7px 0; }
-    .saved-item small { color: var(--muted); }
-    .pairing-panel { border-top: 1px solid var(--line); margin-top: 22px; padding-top: 20px; }
-    .pairing-panel .lead { margin-bottom: 12px; }
-    .pairing-options { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px; }
-    .pairing-option { background: #f7f2f7; border-radius: 10px; padding: 12px; }
-    .pairing-option strong { display: block; margin-bottom: 5px; }
-    .pairing-option small { color: var(--muted); }
-    .pairing-panel label { display: block; font-weight: 650; margin: 17px 0 8px; }
-    .pairing-check { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
-    .pairing-check select { border: 1px solid #c9b8cf; border-radius: 10px; background: #fff;
-      color: var(--ink); padding: 11px; min-height: 46px; min-width: 220px; }
-    .pairing-answer { background: #f7f2f7; border-radius: 10px; padding: 12px; margin-top: 12px; }
-    .alternatives { display: grid; gap: 9px; margin-top: 16px; }
-    .alternative { border: 1px solid var(--line); border-radius: 10px; padding: 11px 14px;
-      background: #fff; text-align: left; color: var(--ink); }
-    [hidden] { display: none !important; }
-    footer { border-top: 1px solid var(--line); padding: 21px 20px; text-align: center;
-      font-size: 12px; color: var(--muted); }
-    @media (max-width: 640px) {
-      main { padding: 20px 14px 38px; } .panel { padding: 18px; border-radius: 18px; }
-      .wine { display: block; } .bottle { min-height: 250px; margin-bottom: 20px; }
-      .bottle img { max-height: 275px; } .facts { grid-template-columns: 1fr 1fr; }
-      .actions button { flex: 1 1 auto; }
+    /* Palette and type follow vino-svoe.ru: wine #8F3D42, cream #FDF9ED, ink #2C2A28, Playfair Display. */
+    :root {
+      color-scheme: light;
+      --wine: #8F3D42; --wine-dark: #74303A; --wine-soft: #F4E3E1;
+      --cream: #FDF9ED; --sand: #F8ECC9; --card: #FFFFFF;
+      --ink: #2C2A28; --muted: #6B645F; --line: #EDE3CF; --line-strong: #D9CBB0;
+      --ok: #3F6B45; --ok-soft: #E6F0E3; --warn: #8A5A12; --warn-soft: #FBEFD3;
+      --radius: 12px; --radius-lg: 20px;
+      --shadow: 0 1px 2px rgba(44,42,40,.05), 0 8px 28px rgba(44,42,40,.07);
+      --serif: "Playfair Display", Georgia, "Times New Roman", serif;
+      --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     }
+    * { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body { margin: 0; background: var(--cream); color: var(--ink); font: 16px/1.5 var(--sans); }
+    button, input, textarea { font: inherit; color: inherit; }
+    button { cursor: pointer; }
+    :focus-visible { outline: 3px solid rgba(143,61,66,.45); outline-offset: 2px; }
+    [hidden] { display: none !important; }
+    .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+    .topbar { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; padding: 12px max(16px, calc((100vw - 960px)/2)); background: rgba(253,249,237,.92);
+      backdrop-filter: saturate(1.4) blur(10px); border-bottom: 1px solid var(--line); }
+    .brand { display: flex; align-items: baseline; gap: 10px; text-decoration: none; color: var(--ink); background: none; border: 0; padding: 0; }
+    .brand-name { font: 600 22px/1 var(--serif); color: var(--wine); letter-spacing: -.01em; }
+    .brand-tag { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+    .diary-link { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px;
+      border: 1px solid var(--line-strong); border-radius: 999px; background: var(--card); font-weight: 600; color: var(--wine); }
+    .diary-link[aria-current="page"] { background: var(--wine); border-color: var(--wine); color: #fff; }
+    .count { min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; background: var(--wine-soft);
+      color: var(--wine); font-size: 12px; display: inline-grid; place-items: center; }
+    .diary-link[aria-current="page"] .count { background: rgba(255,255,255,.2); color: #fff; }
+
+    main { max-width: 960px; margin: 0 auto; padding: 20px 16px 110px; }
+    h1, h2, h3 { font-family: var(--serif); font-weight: 500; letter-spacing: -.01em; margin: 0; color: var(--ink); }
+    h1 { font-size: clamp(30px, 7vw, 44px); line-height: 1.1; }
+    h2 { font-size: clamp(26px, 5.5vw, 34px); line-height: 1.15; }
+    h3 { font-size: 21px; line-height: 1.25; margin-bottom: 10px; }
+    p { margin: 0; }
+    .lead { color: var(--muted); margin-top: 10px; max-width: 46ch; }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow); }
+    .section { padding: 20px; }
+    .section + .section { border-top: 1px solid var(--line); }
+
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 52px; padding: 0 22px;
+      border-radius: var(--radius); border: 1px solid transparent; font-weight: 650; text-decoration: none; transition: background .15s, border-color .15s; }
+    .btn-primary { background: var(--wine); color: #fff; }
+    .btn-primary:hover { background: var(--wine-dark); }
+    .btn-secondary { background: var(--card); border-color: var(--line-strong); color: var(--wine); }
+    .btn-secondary:hover { border-color: var(--wine); }
+    .btn-ghost { background: none; border: 0; color: var(--wine); padding: 0 6px; min-height: 44px; font-weight: 600; }
+    .btn svg { flex: none; }
+
+    /* Scan screen */
+    .intro { margin: 8px 0 20px; }
+    .capture { overflow: hidden; }
+    .viewfinder { position: relative; aspect-ratio: 4 / 3; background: linear-gradient(160deg, #F8ECC9 0%, #F3E4C9 100%);
+      display: grid; place-items: center; overflow: hidden; }
+    .viewfinder svg.frame { width: min(62%, 240px); height: auto; color: var(--wine); opacity: .85; }
+    .viewfinder img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .scanline { position: absolute; left: 8%; right: 8%; height: 3px; border-radius: 3px; top: 10%;
+      background: linear-gradient(90deg, transparent, #fff, transparent); box-shadow: 0 0 18px 4px rgba(255,255,255,.7);
+      animation: scan 1.6s ease-in-out infinite alternate; }
+    @keyframes scan { to { top: 88%; } }
+    .scan-veil { position: absolute; inset: 0; background: rgba(44,42,40,.28); }
+    .scan-label { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); white-space: nowrap;
+      background: rgba(44,42,40,.78); color: #fff; font-size: 14px; font-weight: 600; padding: 8px 14px; border-radius: 999px; }
+    .capture-actions { display: grid; gap: 10px; padding: 16px; }
+    .capture-actions input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+    .tips { list-style: none; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 16px 0 0; padding: 0; }
+    .tips li { display: grid; justify-items: center; text-align: center; gap: 6px; font-size: 13px; line-height: 1.3; color: var(--muted); }
+    .tips svg { color: var(--wine); }
+    .status { margin: 14px 2px 0; color: var(--muted); }
+    .status:empty { display: none; }
+    .status.error { color: #9B2335; background: #FBE9EA; border-radius: var(--radius); padding: 12px 14px; }
+
+    /* Result */
+    .result-head { display: flex; align-items: center; justify-content: space-between; margin: -8px 0 8px; }
+    .wine-card { overflow: hidden; }
+    .wine-top { display: grid; gap: 0; }
+    .bottle { background: #fff; border-bottom: 1px solid var(--line); display: grid; place-items: center; padding: 20px; min-height: 280px; }
+    .bottle img { max-width: 100%; max-height: 320px; object-fit: contain; }
+    .wine-info { padding: 20px; }
+    .match { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 650; padding: 6px 12px; border-radius: 999px;
+      background: var(--ok-soft); color: var(--ok); margin-bottom: 12px; }
+    .match.unsure { background: var(--warn-soft); color: var(--warn); }
+    .match .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+    .winery { color: var(--muted); font-weight: 600; margin-top: 6px; }
+    .facts { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--line); border: 1px solid var(--line);
+      border-radius: var(--radius); overflow: hidden; margin: 18px 0; }
+    .fact { background: var(--card); padding: 12px 14px; }
+    .fact.wide { grid-column: 1 / -1; }
+    .fact small { display: block; color: var(--muted); font-size: 13px; margin-bottom: 2px; }
+    .fact strong { font-weight: 600; }
+    .description p + p { margin-top: 10px; }
+    .description .label { font-weight: 650; }
+    .more { margin-top: 6px; }
+    .notice svg { flex: none; margin-top: 1px; }
+    .notice { display: flex; gap: 10px; align-items: flex-start; background: var(--warn-soft); color: #5E3E0E;
+      border-radius: var(--radius); padding: 12px 14px; margin: 0 0 14px; font-size: 15px; }
+
+    .alts { display: grid; grid-auto-flow: column; grid-auto-columns: 148px; gap: 10px; overflow-x: auto;
+      scroll-snap-type: x mandatory; padding: 2px 2px 8px; margin: 0 -2px; }
+    .alt { scroll-snap-align: start; display: grid; grid-template-rows: 120px auto; text-align: left; background: var(--card);
+      border: 1px solid var(--line); border-radius: var(--radius); padding: 0; overflow: hidden; }
+    .alt[aria-pressed="true"] { border-color: var(--wine); box-shadow: 0 0 0 2px var(--wine) inset; }
+    .alt .thumb { background: #fff; border-bottom: 1px solid var(--line); display: grid; place-items: center; }
+    .alt img { max-height: 108px; max-width: 90%; object-fit: contain; }
+    .alt .meta { padding: 8px 10px 10px; font-size: 13px; line-height: 1.3; }
+    .alt .meta strong { display: block; font-size: 14px; margin-bottom: 2px; }
+    .alt .meta span { color: var(--muted); }
+
+    .pairings { display: grid; gap: 8px; margin: 12px 0 16px; }
+    .pairing { display: grid; grid-template-columns: 36px 1fr; gap: 10px; align-items: start; background: var(--cream);
+      border-radius: var(--radius); padding: 12px; }
+    .pairing .icon { width: 36px; height: 36px; border-radius: 50%; background: var(--wine-soft); color: var(--wine);
+      display: grid; place-items: center; font-weight: 700; }
+    .pairing strong { display: block; }
+    .pairing span { color: var(--muted); font-size: 14px; }
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+    .chip { min-height: 40px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line-strong); background: var(--card);
+      color: var(--ink); font-size: 15px; }
+    .chip[aria-pressed="true"] { background: var(--wine); border-color: var(--wine); color: #fff; }
+    .answer { margin-top: 12px; border-left: 3px solid var(--wine); background: var(--cream); border-radius: 0 var(--radius) var(--radius) 0;
+      padding: 12px 14px; }
+    .answer strong { color: var(--wine); }
+    .muted { color: var(--muted); }
+
+    .stars { display: flex; gap: 4px; margin: 6px 0 12px; }
+    .star { width: 44px; height: 44px; border: 0; background: none; padding: 6px; color: var(--line-strong); }
+    .star[aria-checked="true"], .star.on { color: #C9962B; }
+    textarea { width: 100%; min-height: 84px; border: 1px solid var(--line-strong); border-radius: var(--radius);
+      padding: 12px; resize: vertical; background: var(--card); }
+    .save-row { display: flex; align-items: center; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
+    .saved-ok { color: var(--ok); font-weight: 600; }
+
+    .dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 9; padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+      background: linear-gradient(180deg, rgba(253,249,237,0) 0%, var(--cream) 30%); }
+    .dock .btn { width: 100%; max-width: 560px; margin: 0 auto; display: flex; box-shadow: var(--shadow); }
+
+    /* Diary */
+    .diary-list { display: grid; gap: 12px; margin-top: 18px; }
+    .entry { display: grid; grid-template-columns: 76px 1fr; gap: 14px; padding: 14px; }
+    .entry .thumb { background: #fff; border: 1px solid var(--line); border-radius: 10px; display: grid; place-items: center; height: 104px; }
+    .entry img { max-height: 96px; max-width: 90%; object-fit: contain; }
+    .entry h3 { font-size: 18px; margin: 0; }
+    .entry .note { margin: 6px 0; white-space: pre-wrap; }
+    .entry .row { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; margin-top: 6px; }
+    .entry .mini-stars { color: #C9962B; letter-spacing: 1px; }
+    .empty { text-align: center; padding: 36px 20px; }
+    .empty p { color: var(--muted); margin: 8px auto 18px; max-width: 32ch; }
+
+    footer { text-align: center; font-size: 12px; color: var(--muted); padding: 18px 16px 90px; }
+
+    @media (min-width: 760px) {
+      main { padding-top: 32px; }
+      .scan-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: center; }
+      .intro { margin: 0; }
+      .wine-top { grid-template-columns: 300px 1fr; }
+      .bottle { min-height: 100%; }
+      .dock { display: none; }
+      footer { padding-bottom: 24px; }
+    }
+    @media (prefers-reduced-motion: reduce) { .scanline { animation: none; top: 50%; } * { transition: none !important; } }
   </style>
 </head>
 <body>
-  <header><div class="brand">Своё Вино<small>Сканер российских вин</small></div></header>
+  <header class="topbar">
+    <button class="brand" id="home-link" type="button" aria-label="Своё Вино — на главную сканера">
+      <span class="brand-name">Своё Вино</span><span class="brand-tag">Сканер</span>
+    </button>
+    <button class="diary-link" id="diary-tab" type="button" aria-controls="diary-section">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v17H6.5A2.5 2.5 0 0 0 4 21.5z"/><path d="M4 21.5V4.5"/></svg>
+      Дневник <span class="count" id="diary-count">0</span>
+    </button>
+  </header>
+
   <main>
-    <h1>Узнайте вино по этикетке</h1>
-    <p class="lead">Сфотографируйте бутылку в центре кадра или загрузите снимок. Мы откроем карточку найденного вина.</p>
-    <div class="tabs" role="tablist" aria-label="Разделы">
-      <button id="scan-tab" class="tab" role="tab" aria-selected="true" type="button">Сканировать</button>
-      <button id="diary-tab" class="tab" role="tab" aria-selected="false" type="button">Мой винный дневник</button>
-    </div>
-    <section id="scan-section" role="tabpanel" aria-labelledby="scan-tab">
-      <div class="panel" id="uploader">
-        <form id="scan-form">
-          <div class="upload">
-            <strong>Фото этикетки</strong>
-            <span>Держите нужную бутылку в центре кадра</span>
-            <input id="image-input" name="image" type="file" accept="image/*" required aria-label="Выбрать фотографию вина">
+    <section id="scan-section" aria-label="Сканер">
+      <div id="uploader" class="scan-layout">
+        <div class="intro">
+          <h1>Узнайте вино по&nbsp;этикетке</h1>
+          <p class="lead">Сфотографируйте бутылку — откроем карточку вина из каталога «Своё Вино» с описанием и подсказками к блюдам.</p>
+          <ul class="tips" aria-label="Как снять">
+            <li><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="7" y="3" width="10" height="18" rx="3"/><path d="M3 8V5a2 2 0 0 1 2-2h1M21 8V5a2 2 0 0 0-2-2h-1M3 16v3a2 2 0 0 0 2 2h1M21 16v3a2 2 0 0 1-2 2h-1"/></svg>Бутылка в&nbsp;центре</li>
+            <li><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>Без бликов</li>
+            <li><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="5" y="6" width="14" height="12" rx="2"/><path d="M8 10h8M8 14h5"/></svg>Этикетка целиком</li>
+          </ul>
+        </div>
+        <form id="scan-form" class="card capture">
+          <div class="viewfinder" id="viewfinder">
+            <svg class="frame" id="frame-art" viewBox="0 0 200 240" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true">
+              <path d="M20 50V28a8 8 0 0 1 8-8h22M150 20h22a8 8 0 0 1 8 8v22M180 190v22a8 8 0 0 1-8 8h-22M50 220H28a8 8 0 0 1-8-8v-22" stroke-linecap="round"/>
+              <path d="M88 44h24v26c0 8 16 16 16 36v88a8 8 0 0 1-8 8H80a8 8 0 0 1-8-8v-88c0-20 16-28 16-36z" stroke-width="2.4" opacity=".55"/>
+              <rect x="80" y="126" width="40" height="42" rx="3" stroke-width="2.4" opacity=".55"/>
+            </svg>
+            <img id="preview" alt="Выбранное фото" hidden>
+            <div id="scanning" hidden><div class="scan-veil"></div><div class="scanline"></div><div class="scan-label">Сверяем с каталогом…</div></div>
           </div>
-          <div class="actions"><button id="submit" class="primary" type="submit">Найти вино</button></div>
-          <p id="status" class="status" role="status" aria-live="polite"></p>
+          <div class="capture-actions">
+            <label class="btn btn-primary" for="camera-input">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.5"/></svg>
+              Сфотографировать этикетку
+            </label>
+            <input id="camera-input" type="file" accept="image/*" capture="environment">
+            <label class="btn btn-secondary" for="image-input">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/></svg>
+              Выбрать из галереи
+            </label>
+            <input id="image-input" name="image" type="file" accept="image/*">
+          </div>
         </form>
       </div>
-      <article class="panel" id="result" hidden>
-        <div class="wine">
-          <div class="bottle"><img id="wine-image" alt="Эталонное фото найденного вина"></div>
-          <div>
-            <div class="eyebrow">Найдено в каталоге</div>
-            <h2 id="wine-name"></h2>
-            <p id="wine-winery"></p>
-            <div class="facts" id="wine-facts"></div>
-            <p id="wine-description" class="description"></p>
-            <div class="actions">
-              <button id="rescan" class="secondary" type="button">Другое фото</button>
-              <button id="similar" class="secondary" type="button">Похожие вина</button>
+      <p id="status" class="status" role="status" aria-live="polite"></p>
+
+      <article id="result" hidden aria-labelledby="wine-name">
+        <div class="result-head">
+          <button id="rescan-top" class="btn-ghost" type="button">← Новое фото</button>
+        </div>
+        <div class="card wine-card">
+          <div class="wine-top">
+            <div class="bottle"><img id="wine-image" alt=""></div>
+            <div class="wine-info">
+              <div id="match" class="match"><span class="dot" aria-hidden="true"></span><span id="match-text"></span></div>
+              <h2 id="wine-name"></h2>
+              <p id="wine-winery" class="winery"></p>
+              <div class="facts" id="wine-facts"></div>
+              <div id="wine-description" class="description"></div>
             </div>
           </div>
-        </div>
-        <div id="similar-list" class="alternatives" hidden></div>
-        <section class="pairing-panel" aria-labelledby="pairing-title">
-          <h3 id="pairing-title">С чем подать это вино</h3>
-          <p class="lead">Подсказки основаны на категории, названии и описании вина. Выберите блюдо, чтобы проверить сочетание.</p>
-          <div id="pairing-suggestions" class="pairing-options"></div>
-          <label for="pairing-dish">Что у вас к ужину?</label>
-          <div class="pairing-check">
-            <select id="pairing-dish">
-              <option value="">Выберите блюдо</option>
-              <option value="fish">Рыба</option>
-              <option value="seafood">Морепродукты</option>
-              <option value="poultry">Птица</option>
-              <option value="red_meat">Красное мясо</option>
-              <option value="vegetables">Овощные блюда</option>
-              <option value="cheese">Сыр</option>
-              <option value="dessert">Десерт</option>
-              <option value="spicy">Острые блюда</option>
-            </select>
-            <button id="pairing-button" class="secondary" type="button">Проверить сочетание</button>
-          </div>
-          <p id="pairing-answer" class="pairing-answer" role="status" aria-live="polite" hidden></p>
-        </section>
-        <div class="diary-form">
-          <h3>Сохранить впечатление</h3>
-          <label for="diary-note">Что запомнилось в этом вине?</label>
-          <textarea id="diary-note" maxlength="500" placeholder="Например: попробовать к ужину в выходные"></textarea>
-          <div class="actions"><button id="save" class="primary" type="button">Сохранить в дневник</button></div>
-          <p id="save-status" class="status" role="status" aria-live="polite"></p>
+
+          <section class="section" id="alts-section" aria-labelledby="alts-title" hidden>
+            <div id="unsure-note" class="notice" hidden>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.5v.5"/></svg>
+              <span>Этикетки этой серии очень похожи. Если на бутылке другое название или сладость — выберите своё вино ниже.</span>
+            </div>
+            <h3 id="alts-title">Не то вино?</h3>
+            <div id="alts" class="alts"></div>
+          </section>
+
+          <section class="section" aria-labelledby="pairing-title">
+            <h3 id="pairing-title">С чем подать</h3>
+            <div id="pairing-suggestions" class="pairings"></div>
+            <p class="muted" id="dish-label">Что у вас к ужину?</p>
+            <div class="chips" id="dish-chips" role="group" aria-labelledby="dish-label"></div>
+            <p id="pairing-answer" class="answer" role="status" aria-live="polite" hidden></p>
+          </section>
+
+          <section class="section" aria-labelledby="diary-form-title">
+            <h3 id="diary-form-title">Моя оценка</h3>
+            <div class="stars" id="stars" role="radiogroup" aria-label="Оценка от 1 до 5"></div>
+            <label class="visually-hidden" for="diary-note">Заметка о вине</label>
+            <textarea id="diary-note" maxlength="500" placeholder="Что запомнилось? Например: взять ещё к шашлыку"></textarea>
+            <div class="save-row">
+              <button id="save" class="btn btn-primary" type="button">Сохранить в дневник</button>
+              <span id="save-status" role="status" aria-live="polite"></span>
+            </div>
+          </section>
         </div>
       </article>
     </section>
-    <section id="diary-section" role="tabpanel" aria-labelledby="diary-tab" hidden>
-      <div class="panel"><h2>Мой винный дневник</h2>
-        <p class="lead">Сохранённые вина и ваши заметки остаются в этом браузере.</p>
-        <div id="saved-list" class="saved-list"></div>
-      </div>
+
+    <section id="diary-section" aria-labelledby="diary-title" hidden>
+      <h1 id="diary-title">Мой винный дневник</h1>
+      <p class="lead">Вина, которые вы отсканировали и сохранили. Хранятся только в этом браузере.</p>
+      <div id="saved-list" class="diary-list"></div>
     </section>
   </main>
-  <footer>Чрезмерное употребление алкоголя вредит вашему здоровью</footer>
+
+  <div class="dock" id="dock" hidden>
+    <button id="rescan" class="btn btn-primary" type="button">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.5"/></svg>
+      Сканировать другое вино
+    </button>
+  </div>
+
+  <footer>Чрезмерное употребление алкоголя вредит вашему здоровью. 18+</footer>
+
   <script>
     const $ = id => document.getElementById(id);
     const diaryKey = 'svoe-vino-diary-v1';
-    let current = null;
-    let alternatives = [];
+    const DISHES = [['fish', 'Рыба'], ['seafood', 'Морепродукты'], ['poultry', 'Птица'], ['red_meat', 'Красное мясо'],
+      ['vegetables', 'Овощи'], ['cheese', 'Сыр'], ['dessert', 'Десерт'], ['spicy', 'Острое']];
+    let current = null, recognized = null, rating = 0, previewUrl = null;
+    const cardCache = new Map();
+    const thumb = slug => `/v1/wines/${encodeURIComponent(slug)}/thumbnail`;
 
-    function showTab(which) {
-      const diary = which === 'diary';
-      $('scan-section').hidden = diary;
-      $('diary-section').hidden = !diary;
-      $('scan-tab').setAttribute('aria-selected', String(!diary));
-      $('diary-tab').setAttribute('aria-selected', String(diary));
-      if (diary) renderDiary();
+    function el(tag, props = {}, ...children) {
+      const node = Object.assign(document.createElement(tag), props);
+      node.append(...children.filter(child => child !== null && child !== undefined));
+      return node;
     }
     function setStatus(message, error = false) {
-      $('status').textContent = message;
-      $('status').classList.toggle('error', error);
+      $('status').textContent = message; $('status').classList.toggle('error', error && !!message);
     }
-    function addFact(label, value) {
-      if (!value) return;
-      const box = document.createElement('div'); box.className = 'fact';
-      const small = document.createElement('small'); small.textContent = label;
-      const strong = document.createElement('strong'); strong.textContent = value;
-      box.append(small, strong); $('wine-facts').append(box);
+    function saved() { try { return JSON.parse(localStorage.getItem(diaryKey) || '{}'); } catch (_) { return {}; } }
+    function updateCount() { $('diary-count').textContent = Object.keys(saved()).length; }
+
+    function showScreen(which) {
+      const diary = which === 'diary';
+      $('scan-section').hidden = diary; $('diary-section').hidden = !diary;
+      $('diary-tab').toggleAttribute('aria-current', diary); if (diary) $('diary-tab').setAttribute('aria-current', 'page');
+      $('dock').hidden = diary || $('result').hidden;
+      if (diary) renderDiary();
+      window.scrollTo({ top: 0 });
     }
-    function showWine(card) {
+    function resetScan() {
+      $('result').hidden = true; $('uploader').hidden = false; $('dock').hidden = true;
+      $('preview').hidden = true; $('frame-art').hidden = false; $('scanning').hidden = true;
+      $('camera-input').value = ''; $('image-input').value = ''; setStatus('');
+      showScreen('scan');
+    }
+
+    async function getCard(slug) {
+      if (cardCache.has(slug)) return cardCache.get(slug);
+      const response = await fetch(`/v1/wines/${encodeURIComponent(slug)}`);
+      if (!response.ok) throw new Error('card');
+      const card = await response.json(); cardCache.set(slug, card); return card;
+    }
+
+    function renderFacts(card) {
+      const facts = $('wine-facts'); facts.replaceChildren();
+      const add = (label, value, wide = false) => value && facts.append(
+        el('div', { className: 'fact' + (wide ? ' wide' : '') }, el('small', { textContent: label }), el('strong', { textContent: value })));
+      add('Регион', card.region);
+      add('Категория и сладость', [card.category, card.sweetness].filter(Boolean).join(', '));
+      add('Цвет', card.color);
+      add('Сорта винограда', card.grape, true);
+      // Keep the two-column grid without an empty cell.
+      const narrow = [...facts.querySelectorAll('.fact:not(.wide)')];
+      if (narrow.length % 2) narrow.at(-1).classList.add('wide');
+    }
+    function renderDescription(text) {
+      const box = $('wine-description'); box.replaceChildren();
+      if (!text) { box.append(el('p', { className: 'muted', textContent: 'Описание пока не добавлено.' })); return; }
+      // Descriptions often end with "Сочетания: …"; show it as its own paragraph.
+      const [main, pairs] = text.split(/\s*Сочетания?:\s*/);
+      const body = el('p', { textContent: main.trim() });
+      box.append(body);
+      if (pairs) box.append(el('p', {}, el('span', { className: 'label', textContent: 'Сочетания: ' }), pairs.trim()));
+      if (main.length > 320) {
+        body.textContent = main.slice(0, 300).replace(/\s+\S*$/, '') + '…';
+        const more = el('button', { type: 'button', className: 'btn-ghost more', textContent: 'Читать полностью' });
+        more.addEventListener('click', () => { body.textContent = main.trim(); more.remove(); });
+        box.insertBefore(more, body.nextSibling);
+      }
+    }
+    function renderMatch(probability, isRecognized) {
+      const box = $('match');
+      if (!isRecognized) { box.className = 'match'; $('match-text').textContent = recognized ? 'Выбрано вами' : 'Из вашего дневника'; return; }
+      const unsure = probability < 0.7;
+      box.className = 'match' + (unsure ? ' unsure' : '');
+      $('match-text').textContent = unsure ? `Похоже на это вино · ${Math.round(probability * 100)}%`
+                                           : `Найдено в каталоге · совпадение ${Math.round(probability * 100)}%`;
+    }
+
+    function showWine(card, probability = null) {
       current = card;
-      $('uploader').hidden = true; $('result').hidden = false;
-      $('wine-name').textContent = card.name;
-      $('wine-winery').textContent = card.winery;
-      $('wine-description').textContent = card.description || 'Описание пока не добавлено.';
-      $('wine-image').src = `/v1/wines/${encodeURIComponent(card.slug)}/image`;
-      $('wine-facts').replaceChildren();
-      addFact('Регион', card.region); addFact('Виноград', card.grape);
-      addFact('Категория', card.category);
-      $('similar-list').hidden = true; $('similar-list').replaceChildren();
-      $('diary-note').value = ''; $('save-status').textContent = '';
-      $('pairing-suggestions').replaceChildren(); $('pairing-dish').value = '';
-      $('pairing-answer').hidden = true; $('pairing-answer').textContent = '';
-      loadPairings(card.slug);
+      $('uploader').hidden = true; $('result').hidden = false; $('dock').hidden = false; setStatus('');
+      $('wine-name').textContent = card.name; $('wine-winery').textContent = card.winery;
+      const image = $('wine-image'); image.alt = `Бутылка: ${card.name}`;
+      image.src = thumb(card.slug);
+      renderMatch(probability ?? 1, recognized && card.slug === recognized.slug);
+      renderFacts(card); renderDescription(card.description);
+      document.querySelectorAll('.alt').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.slug === card.slug)));
+      $('pairing-answer').hidden = true; renderDishes(); loadPairings(card.slug);
+      const entry = saved()[card.slug];
+      rating = entry?.rating || 0; renderStars();
+      $('diary-note').value = entry?.note || ''; $('save-status').textContent = entry ? 'Уже в дневнике' : '';
+      $('save-status').className = entry ? 'saved-ok' : '';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    async function renderAlternatives(prediction) {
+      const list = $('alts'); list.replaceChildren();
+      const others = (prediction.top5 || []).filter(item => item.slug !== prediction.slug).slice(0, 4);
+      $('alts-section').hidden = !others.length;
+      $('unsure-note').hidden = prediction.verdict !== 'check_alternatives';
+      const all = [{ slug: prediction.slug, probability: prediction.confidence, card: prediction.card }, ...others];
+      for (const item of all) {
+        const button = el('button', { type: 'button', className: 'alt' });
+        button.dataset.slug = item.slug; button.setAttribute('aria-pressed', String(item.slug === prediction.slug));
+        const img = el('img', { src: thumb(item.slug), alt: '', loading: 'lazy' });
+        const title = el('strong', { textContent: '…' }); const meta = el('span', { textContent: `${Math.round((item.probability || 0) * 100)}%` });
+        button.append(el('div', { className: 'thumb' }, img), el('div', { className: 'meta' }, title, meta));
+        list.append(button);
+        try {
+          const card = item.card || await getCard(item.slug);
+          title.textContent = card.name;
+          meta.textContent = [card.sweetness || card.category, `${Math.round((item.probability || 0) * 100)}%`].filter(Boolean).join(' · ');
+          button.setAttribute('aria-label', `${card.name}, ${card.winery}`);
+          button.addEventListener('click', () => showWine(card, item.probability));
+        } catch (_) { button.remove(); }
+      }
+    }
+
+    function renderDishes() {
+      const chips = $('dish-chips'); chips.replaceChildren();
+      for (const [value, label] of DISHES) {
+        const chip = el('button', { type: 'button', className: 'chip', textContent: label });
+        chip.setAttribute('aria-pressed', 'false');
+        chip.addEventListener('click', () => {
+          chips.querySelectorAll('.chip').forEach(other => other.setAttribute('aria-pressed', String(other === chip)));
+          loadPairings(current.slug, value);
+        });
+        chips.append(chip);
+      }
     }
     async function loadPairings(slug, dish = null) {
       try {
@@ -211,105 +426,100 @@
         const data = await response.json();
         if (!current || current.slug !== slug) return;
         if (dish) {
-          const answer = data.selected;
-          $('pairing-answer').textContent = `${answer.label}: ${answer.fit}. ${answer.reason}`;
-          $('pairing-answer').hidden = false;
-          return;
+          const answer = data.selected, box = $('pairing-answer');
+          box.replaceChildren(el('strong', { textContent: `${answer.label}: ${answer.fit}. ` }), answer.reason);
+          box.hidden = false; return;
         }
-        const suggestions = $('pairing-suggestions');
-        suggestions.replaceChildren();
+        const list = $('pairing-suggestions'); list.replaceChildren();
         for (const suggestion of data.suggestions) {
-          const box = document.createElement('div'); box.className = 'pairing-option';
-          const title = document.createElement('strong'); title.textContent = suggestion.label;
-          const reason = document.createElement('small'); reason.textContent = suggestion.reason;
-          box.append(title, reason); suggestions.append(box);
+          list.append(el('div', { className: 'pairing' },
+            el('span', { className: 'icon', textContent: suggestion.label.slice(0, 1), ariaHidden: 'true' }),
+            el('div', {}, el('strong', { textContent: suggestion.label }), el('span', { textContent: suggestion.reason }))));
         }
       } catch (error) {
         if (!current || current.slug !== slug) return;
-        $('pairing-answer').textContent = error.message || 'Не удалось получить подсказку.';
-        $('pairing-answer').hidden = false;
+        $('pairing-answer').textContent = error.message || 'Не удалось получить подсказку.'; $('pairing-answer').hidden = false;
       }
     }
-    $('scan-form').addEventListener('submit', async event => {
-      event.preventDefault();
-      const file = $('image-input').files[0];
+
+    function renderStars() {
+      const box = $('stars'); box.replaceChildren();
+      for (let value = 1; value <= 5; value++) {
+        const star = el('button', { type: 'button', className: 'star' + (value <= rating ? ' on' : '') });
+        star.setAttribute('role', 'radio'); star.setAttribute('aria-checked', String(value === rating));
+        star.setAttribute('aria-label', `${value} из 5`);
+        star.innerHTML = '<svg viewBox="0 0 24 24" width="32" height="32" fill="currentColor" aria-hidden="true"><path d="m12 2.8 2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.2 6.3 20.3l1.2-6.4L2.8 9.5l6.4-.8z"/></svg>';
+        star.addEventListener('click', () => { rating = value; renderStars(); });
+        box.append(star);
+      }
+    }
+
+    async function scan(file) {
       if (!file) return;
-      $('submit').disabled = true; setStatus('Ищем вино…');
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      previewUrl = URL.createObjectURL(file);
+      $('preview').src = previewUrl; $('preview').hidden = false; $('frame-art').hidden = true; $('scanning').hidden = false;
+      setStatus('');
       try {
         const body = new FormData(); body.append('image', file);
         const response = await fetch('/v1/predict', { method: 'POST', body });
-        if (!response.ok) throw new Error(`Не удалось обработать фото (${response.status})`);
+        if (!response.ok) throw new Error(response.status === 413 ? 'Фото больше 16 МБ. Попробуйте другое.' : 'Не удалось распознать фото. Попробуйте снять ещё раз.');
         const prediction = await response.json();
-        alternatives = prediction.alternatives || [];
-        showWine(prediction.card);
-        setStatus('');
-      } catch (error) { setStatus(error.message || 'Ошибка поиска. Попробуйте другое фото.', true); }
-      finally { $('submit').disabled = false; }
-    });
-    $('rescan').addEventListener('click', () => {
-      $('result').hidden = true; $('uploader').hidden = false; $('image-input').value = '';
-      $('image-input').focus();
-    });
-    $('similar').addEventListener('click', async () => {
-      const list = $('similar-list');
-      if (!list.hidden) { list.hidden = true; return; }
-      list.replaceChildren();
-      const unique = [...new Set(alternatives.map(item => item.slug))].filter(slug => slug !== current.slug).slice(0, 3);
-      for (const slug of unique) {
-        try {
-          const response = await fetch(`/v1/wines/${encodeURIComponent(slug)}`);
-          if (!response.ok) continue;
-          const card = await response.json();
-          const item = document.createElement('button'); item.type = 'button'; item.className = 'alternative';
-          item.textContent = `${card.name} · ${card.winery}`;
-          item.addEventListener('click', () => showWine(card));
-          list.append(item);
-        } catch (_) { /* A failed suggestion must not hide the recognized wine. */ }
-      }
-      if (!list.children.length) list.textContent = 'Похожие вина пока не найдены.';
-      list.hidden = false;
-    });
-    function saved() {
-      try { return JSON.parse(localStorage.getItem(diaryKey) || '{}'); }
-      catch (_) { return {}; }
+        recognized = prediction.card; cardCache.set(prediction.slug, prediction.card);
+        showWine(prediction.card, prediction.confidence);
+        renderAlternatives(prediction);
+      } catch (error) {
+        setStatus(error.message || 'Ошибка поиска. Попробуйте другое фото.', true);
+      } finally { $('scanning').hidden = true; }
     }
-    $('pairing-button').addEventListener('click', () => {
-      if (!current) return;
-      const dish = $('pairing-dish').value;
-      if (!dish) {
-        $('pairing-answer').textContent = 'Сначала выберите блюдо.';
-        $('pairing-answer').hidden = false;
-        return;
-      }
-      loadPairings(current.slug, dish);
-    });
+    $('camera-input').addEventListener('change', event => scan(event.target.files[0]));
+    $('image-input').addEventListener('change', event => scan(event.target.files[0]));
+    $('scan-form').addEventListener('submit', event => { event.preventDefault(); scan($('image-input').files[0]); });
+
     $('save').addEventListener('click', () => {
       if (!current) return;
       try {
         const entries = saved();
-        entries[current.slug] = { card: current, note: $('diary-note').value.trim(),
-          savedAt: new Date().toISOString() };
+        entries[current.slug] = { card: current, note: $('diary-note').value.trim(), rating, savedAt: new Date().toISOString() };
         localStorage.setItem(diaryKey, JSON.stringify(entries));
-        $('save-status').textContent = 'Сохранено в ваш винный дневник.';
-      } catch (_) { $('save-status').textContent = 'Не удалось сохранить в этом браузере.'; }
+        $('save-status').textContent = 'Сохранено ✓'; $('save-status').className = 'saved-ok'; updateCount();
+      } catch (_) { $('save-status').textContent = 'Не удалось сохранить в этом браузере.'; $('save-status').className = ''; }
     });
+
     function renderDiary() {
       const list = $('saved-list'); list.replaceChildren();
       const entries = Object.values(saved()).sort((a, b) => b.savedAt.localeCompare(a.savedAt));
-      if (!entries.length) { list.textContent = 'Здесь появятся вина, которые вы сохраните после сканирования.'; return; }
+      if (!entries.length) {
+        const start = el('button', { type: 'button', className: 'btn btn-primary', textContent: 'Отсканировать вино' });
+        start.addEventListener('click', resetScan);
+        list.append(el('div', { className: 'card empty' }, el('h3', { textContent: 'Пока пусто' }),
+          el('p', { textContent: 'Отсканируйте бутылку и сохраните впечатление — вина появятся здесь.' }), start));
+        return;
+      }
       for (const entry of entries) {
-        const item = document.createElement('div'); item.className = 'saved-item';
-        const title = document.createElement('h3'); title.textContent = entry.card.name;
-        const byline = document.createElement('small'); byline.textContent = entry.card.winery;
-        const note = document.createElement('p'); note.textContent = entry.note;
-        const open = document.createElement('button'); open.type = 'button'; open.className = 'secondary';
-        open.textContent = 'Открыть карточку';
-        open.addEventListener('click', () => { showTab('scan'); showWine(entry.card); });
-        item.append(title, byline, note, open); list.append(item);
+        const open = el('button', { type: 'button', className: 'btn-ghost', textContent: 'Открыть' });
+        open.addEventListener('click', () => { recognized = null; showScreen('scan'); $('alts-section').hidden = true; showWine(entry.card); });
+        const remove = el('button', { type: 'button', className: 'btn-ghost', textContent: 'Удалить' });
+        remove.addEventListener('click', () => {
+          const all = saved(); delete all[entry.card.slug];
+          try { localStorage.setItem(diaryKey, JSON.stringify(all)); } catch (_) { /* keep the list as is */ }
+          updateCount(); renderDiary();
+        });
+        const stars = entry.rating ? el('span', { className: 'mini-stars', textContent: '★'.repeat(entry.rating) + '☆'.repeat(5 - entry.rating), ariaLabel: `Оценка ${entry.rating} из 5` }) : null;
+        const date = new Date(entry.savedAt).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+        list.append(el('article', { className: 'card entry' },
+          el('div', { className: 'thumb' }, el('img', { src: thumb(entry.card.slug), alt: '', loading: 'lazy' })),
+          el('div', {}, el('h3', { textContent: entry.card.name }), el('p', { className: 'muted', textContent: `${entry.card.winery} · ${date}` }),
+            stars, entry.note ? el('p', { className: 'note', textContent: entry.note }) : null,
+            el('div', { className: 'row' }, open, remove))));
       }
     }
-    $('scan-tab').addEventListener('click', () => showTab('scan'));
-    $('diary-tab').addEventListener('click', () => showTab('diary'));
+
+    $('rescan').addEventListener('click', resetScan);
+    $('rescan-top').addEventListener('click', resetScan);
+    $('home-link').addEventListener('click', resetScan);
+    $('diary-tab').addEventListener('click', () => showScreen($('diary-section').hidden ? 'diary' : 'scan'));
+    updateCount();
   </script>
 </body>
 </html>
