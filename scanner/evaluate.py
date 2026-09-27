@@ -18,6 +18,7 @@ from .catalog import ROOT, sha256_file
 from .labels import read_labels
 from .server import SearchEngine
 from .ocr import MODEL_DIR as DEFAULT_OCR_MODEL_DIR, MODEL_SHA256 as OCR_MODEL_SHA256
+from .verifier import DEFAULT_MODEL_DIR as DEFAULT_VERIFIER_DIR
 from .vision import DEFAULT_INDEX, DEFAULT_MANIFEST, DEFAULT_MODEL_DIR
 
 
@@ -40,13 +41,14 @@ def evaluate(images_dir: Path, output: Path, labels_path: Path | None,
     output.parent.mkdir(parents=True, exist_ok=True)
     correct_top1 = correct_top5 = 0
     latencies = []
-    ocr_invocations = 0
+    ocr_invocations = verifier_invocations = 0
     temporary = output.with_suffix(output.suffix + ".tmp")
     with temporary.open("w", encoding="utf-8") as stream:
         for count, path in enumerate(paths, 1):
             started = time.perf_counter()
             prediction = engine.predict(path.read_bytes())
             ocr_invocations += prediction["ocr_used"]
+            verifier_invocations += prediction.get("verifier_used", False)
             latency_ms = round((time.perf_counter() - started) * 1000)
             latencies.append(latency_ms)
             slugs = [prediction["slug"]] + [item["slug"] for item in prediction["alternatives"]]
@@ -59,6 +61,8 @@ def evaluate(images_dir: Path, output: Path, labels_path: Path | None,
                 "margin_to_second": prediction["margin_to_second"],
                 "latency_ms": latency_ms,
                 "ocr_used": prediction["ocr_used"],
+                "verifier_used": prediction.get("verifier_used", False),
+                "confidence": round(prediction["confidence"], 6),
             }
             if path.name in labels:
                 label = labels[path.name]
@@ -82,6 +86,7 @@ def evaluate(images_dir: Path, output: Path, labels_path: Path | None,
         "unknown_labels": sum(label.status == "unknown" for label in labels.values()),
         "ambiguous_labels": sum(label.status == "ambiguous" for label in labels.values()),
         "ocr_invocations": ocr_invocations,
+        "verifier_invocations": verifier_invocations,
         "top1_correct": correct_top1,
         "top5_correct": correct_top5,
         "top1_accuracy": correct_top1 / verified_count if verified_count else None,
@@ -121,9 +126,14 @@ def main() -> None:
     parser.add_argument("--catalog-images-dir", type=Path, default=ROOT / "data/competition_imgs")
     parser.add_argument("--ocr-model-dir", type=Path, default=DEFAULT_OCR_MODEL_DIR)
     parser.add_argument("--use-ocr", action="store_true")
+    parser.add_argument("--use-verifier", action="store_true")
+    parser.add_argument("--verifier-dir", type=Path, default=DEFAULT_VERIFIER_DIR)
+    parser.add_argument("--device", choices=["cuda", "cpu"])
     args = parser.parse_args()
     engine = SearchEngine(args.manifest, args.index, args.model_dir, args.catalog_images_dir,
-                          use_ocr=args.use_ocr, ocr_model_dir=args.ocr_model_dir)
+                          use_ocr=args.use_ocr, ocr_model_dir=args.ocr_model_dir,
+                          use_verifier=args.use_verifier, verifier_dir=args.verifier_dir,
+                          device=args.device)
     print(json.dumps(evaluate(args.images_dir, args.output, args.labels, engine,
                               args.index, args.manifest), ensure_ascii=False))
 

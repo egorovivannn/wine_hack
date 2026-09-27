@@ -87,8 +87,6 @@ def review(image_path: Path, output_dir: Path, top_k: int,
             "category": card["category"],
             "grape": card["grape"],
             "score": candidate.score,
-            "full_score": candidate.full_score,
-            "center_score": candidate.center_score,
             "reference_file": candidate.image_name,
             "reference_sha256": images[candidate.image_name]["sha256"],
         })

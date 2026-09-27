@@ -23,8 +23,8 @@ from .image import PREPROCESSING_VERSION, decode_image, query_views, reference_v
 MODEL_ID = "google/siglip2-base-patch16-384"
 MODEL_REVISION = "f775b65a79762255128c981547af89addcfe0f88"
 DEFAULT_MODEL_DIR = ROOT / "data/models/siglip2-base-patch16-384"
-DEFAULT_MANIFEST = ROOT / "data/catalog_manifest.json"
-DEFAULT_INDEX = ROOT / "data/index/siglip2.npz"
+DEFAULT_MANIFEST = ROOT / "data/catalog_manifest_corrected.json"
+DEFAULT_INDEX = ROOT / "data/index/siglip2_multiview.npz"
 
 
 def _unit_rows(values: np.ndarray) -> np.ndarray:
@@ -44,7 +44,7 @@ class VisionEncoder:
         self.processor = AutoImageProcessor.from_pretrained(
             model_dir, use_fast=False, local_files_only=True)
         self.model = AutoModel.from_pretrained(
-            model_dir, torch_dtype=dtype, local_files_only=True).to(self.device).eval()
+            model_dir, dtype=dtype, local_files_only=True).to(self.device).eval()
 
     @torch.inference_mode()
     def encode(self, images: list[Image.Image], batch_size: int = 16) -> np.ndarray:
@@ -55,6 +55,8 @@ class VisionEncoder:
             inputs = self.processor(images=images[start:start + batch_size],
                                     return_tensors="pt").to(self.device)
             features = self.model.get_image_features(**inputs)
+            if not isinstance(features, torch.Tensor):  # transformers 5 returns a model output
+                features = features.pooler_output
             vectors.append(F.normalize(features.float(), dim=-1).cpu().numpy())
         if not vectors:
             raise ValueError("No images to encode")
@@ -65,16 +67,14 @@ class VisionEncoder:
 class Candidate:
     slug: str
     score: float
-    full_score: float
-    center_score: float
     image_name: str
 
 
 class GalleryIndex:
     def __init__(self, filenames: list[str], embeddings: np.ndarray,
                  image_slugs: list[list[str]]):
-        if embeddings.ndim != 3 or embeddings.shape[1] != 2:
-            raise ValueError("Expected [reference, full/label, feature] embeddings")
+        if embeddings.ndim != 3:
+            raise ValueError("Expected [reference, view, feature] embeddings")
         if len(filenames) != len(embeddings) or len(image_slugs) != len(filenames):
             raise ValueError("Index rows, filenames and slug groups differ")
         if len(set(filenames)) != len(filenames):
@@ -89,18 +89,15 @@ class GalleryIndex:
         if top_k < 1:
             raise ValueError("top_k must be positive")
         query = _unit_rows(query)
-        if query.shape != self.embeddings.shape[1:]:
+        if query.ndim != 2 or query.shape[1] != self.embeddings.shape[2]:
             raise ValueError("Query and gallery feature dimensions differ")
-        full = self.embeddings[:, 0] @ query[0]
-        center = self.embeddings[:, 1] @ query[1]
-        scores = 0.35 * full + 0.65 * center
+        # Each query crop keeps its best reference view; the crops are then averaged.
+        scores = np.einsum("qd,rvd->qrv", query, self.embeddings).max(axis=2).mean(axis=0)
         ranked = np.argsort(-scores, kind="stable")
         candidates: list[Candidate] = []
         for index in ranked:
             for slug in self.image_slugs[int(index)]:
                 candidates.append(Candidate(slug=slug, score=float(scores[index]),
-                                            full_score=float(full[index]),
-                                            center_score=float(center[index]),
                                             image_name=self.filenames[int(index)]))
                 if len(candidates) >= top_k:
                     return candidates
@@ -127,7 +124,7 @@ def build_index(manifest_path: Path, images_dir: Path, model_dir: Path,
         for record in records:
             views.extend(reference_views(decode_image(images_dir / record["filename"])))
         embeddings = encoder.encode(views, batch_size=batch_size)
-        vectors.extend(embeddings.reshape(len(records), 2, -1))
+        vectors.extend(embeddings.reshape(len(records), len(views) // len(records), -1))
         if start == 0 or (start + len(records)) % 200 < batch_size:
             print(f"Indexed {start + len(records)}/{len(expected_files)} references", flush=True)
     matrix = np.stack(vectors).astype(np.float32)

@@ -9,7 +9,12 @@ from PIL import Image, ImageChops, ImageOps
 
 
 SIDE = 384
-PREPROCESSING_VERSION = "center-views-v1"
+PREPROCESSING_VERSION = "multiview-v2"
+# Fractions (left, top, right, bottom). Reference: whole bottle, label band, tight label,
+# bottle body. Query: whole frame, centre, wide centre. The first two keep the v1 views.
+REFERENCE_CROPS = ((0, 0, 1, 1), (0.06, 0.28, 0.94, 0.84),
+                   (0.10, 0.35, 0.90, 0.78), (0, 0.20, 1, 0.97))
+QUERY_CROPS = ((0, 0, 1, 1), (0.22, 0.16, 0.78, 0.88), (0.15, 0.10, 0.85, 0.90))
 
 
 def decode_image(source: bytes | Path | str | Image.Image) -> Image.Image:
@@ -58,15 +63,11 @@ def _square(image: Image.Image) -> Image.Image:
                         color="white", centering=(0.5, 0.5))
 
 
-def reference_views(image: Image.Image) -> tuple[Image.Image, Image.Image]:
+def reference_views(image: Image.Image) -> tuple[Image.Image, ...]:
     image = _reference_bounds(image)
-    full = _square(image)
-    label = _square(_crop_fraction(image, 0.06, 0.28, 0.94, 0.84))
-    return full, label
+    return tuple(_square(_crop_fraction(image, *crop)) for crop in REFERENCE_CROPS)
 
 
-def query_views(image: Image.Image) -> tuple[Image.Image, Image.Image]:
+def query_views(image: Image.Image) -> tuple[Image.Image, ...]:
     """Favor the central bottle while retaining a full-scene fallback."""
-    full = _square(image)
-    center = _square(_crop_fraction(image, 0.22, 0.16, 0.78, 0.88))
-    return full, center
+    return tuple(_square(_crop_fraction(image, *crop)) for crop in QUERY_CROPS)
