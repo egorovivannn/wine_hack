@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 from PIL import Image
 
 from .image import decode_image
+from .recommend import Recommender
 from .server import create_app
 
 
@@ -17,6 +18,7 @@ class FakeEngine:
 
     def __init__(self, image_path):
         self.image_path = image_path
+        self.recommender = Recommender(self.cards)
 
     def predict(self, content):
         if decode_image(content).size != (20, 30):
@@ -59,6 +61,15 @@ class ServerTests(unittest.TestCase):
             self.assertEqual(pairing.json()["selected"]["dish"], "fish")
             self.assertEqual(client.get("/v1/wines/verified-slug/pairings",
                                         params={"dish": "unknown"}).status_code, 422)
+
+    def test_recommendation_endpoints_validate_input(self):
+        with TestClient(create_app(FakeEngine(self.image_path))) as client:
+            analogues = client.get("/v1/wines/verified-slug/analogues")
+            self.assertEqual(analogues.status_code, 200)
+            self.assertEqual(analogues.json()["analogues"], [])
+            self.assertEqual(client.get("/v1/wines/missing/analogues").status_code, 404)
+            self.assertEqual(client.get("/v1/sommelier", params={"dish": "fish"}).status_code, 200)
+            self.assertEqual(client.get("/v1/sommelier", params={"dish": "pizza"}).status_code, 422)
 
     def test_bad_or_missing_image_returns_clear_error(self):
         with TestClient(create_app(FakeEngine(self.image_path))) as client:

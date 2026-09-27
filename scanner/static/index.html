@@ -162,6 +162,24 @@
     .empty { text-align: center; padding: 36px 20px; }
     .empty p { color: var(--muted); margin: 8px auto 18px; max-width: 32ch; }
 
+    .nav { display: flex; gap: 8px; }
+    .analogs { grid-auto-columns: 172px; }
+    .alt .why { display: block; margin-top: 6px; color: var(--ok); font-size: 12px; line-height: 1.35; }
+    .ask-somm { margin: 2px 0 0; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0 6px; color: var(--muted); font-size: 15px; }
+    .somm-cta { margin-top: 16px; width: 100%; }
+    .chat { display: grid; gap: 10px; margin-top: 18px; }
+    .bubble { max-width: 88%; padding: 12px 14px; border-radius: 18px 18px 18px 6px; background: var(--card);
+      border: 1px solid var(--line); box-shadow: var(--shadow); }
+    .bubble.me { justify-self: end; background: var(--wine); color: #fff; border: 0; border-radius: 18px 18px 6px 18px; box-shadow: none; }
+    #answers { margin: 14px 0 4px; }
+    .picks { display: grid; gap: 12px; margin-top: 14px; }
+    .pick { display: grid; grid-template-columns: 84px 1fr; gap: 14px; padding: 14px; text-align: left; color: var(--ink); width: 100%; }
+    .pick .thumb { background: #fff; border: 1px solid var(--line); border-radius: 10px; display: grid; place-items: center; height: 116px; }
+    .pick img { max-height: 106px; max-width: 90%; object-fit: contain; }
+    .pick h3 { font-size: 18px; margin: 0 0 2px; }
+    .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .tag { font-size: 12px; line-height: 1.3; background: var(--ok-soft); color: var(--ok); border-radius: 999px; padding: 4px 10px; }
+    @media (max-width: 420px) { .brand-tag, .nav-label { display: none; } .diary-link { padding: 0 12px; } }
     footer { text-align: center; font-size: 12px; color: var(--muted); padding: 18px 16px 90px; }
 
     @media (min-width: 760px) {
@@ -181,10 +199,16 @@
     <button class="brand" id="home-link" type="button" aria-label="Своё Вино — на главную сканера">
       <span class="brand-name">Своё Вино</span><span class="brand-tag">Сканер</span>
     </button>
-    <button class="diary-link" id="diary-tab" type="button" aria-controls="diary-section">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v17H6.5A2.5 2.5 0 0 0 4 21.5z"/><path d="M4 21.5V4.5"/></svg>
-      Дневник <span class="count" id="diary-count">0</span>
-    </button>
+    <nav class="nav" aria-label="Разделы">
+      <button class="diary-link" id="somm-tab" type="button" aria-controls="somm-section">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M8 3h8l-1 7a3 3 0 0 1-6 0z"/><path d="M12 13v7M8.5 21h7"/></svg>
+        Сомелье
+      </button>
+      <button class="diary-link" id="diary-tab" type="button" aria-controls="diary-section" aria-label="Дневник">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v17H6.5A2.5 2.5 0 0 0 4 21.5z"/><path d="M4 21.5V4.5"/></svg>
+        <span class="nav-label">Дневник</span> <span class="count" id="diary-count">0</span>
+      </button>
+    </nav>
   </header>
 
   <main>
@@ -220,6 +244,7 @@
               Выбрать из галереи
             </label>
             <input id="image-input" name="image" type="file" accept="image/*">
+            <p class="ask-somm">Не знаете, что взять? <button id="somm-intro" class="btn-ghost" type="button">Спросите сомелье →</button></p>
           </div>
         </form>
       </div>
@@ -250,12 +275,19 @@
             <div id="alts" class="alts"></div>
           </section>
 
+          <section class="section" id="analog-section" aria-labelledby="analog-title" hidden>
+            <h3 id="analog-title">Похожие вина других виноделен</h3>
+            <p class="muted" id="analog-lead">Тот же стиль — чтобы сравнить или найти замену на полке.</p>
+            <div id="analogs" class="alts analogs"></div>
+          </section>
+
           <section class="section" aria-labelledby="pairing-title">
             <h3 id="pairing-title">С чем подать</h3>
             <div id="pairing-suggestions" class="pairings"></div>
             <p class="muted" id="dish-label">Что у вас к ужину?</p>
             <div class="chips" id="dish-chips" role="group" aria-labelledby="dish-label"></div>
             <p id="pairing-answer" class="answer" role="status" aria-live="polite" hidden></p>
+            <button id="somm-from-wine" class="btn btn-secondary somm-cta" type="button">Подобрать к ужину вино в похожем стиле</button>
           </section>
 
           <section class="section" aria-labelledby="diary-form-title">
@@ -270,6 +302,18 @@
           </section>
         </div>
       </article>
+    </section>
+
+    <section id="somm-section" aria-labelledby="somm-title" hidden>
+      <h1 id="somm-title">Цифровой сомелье</h1>
+      <p class="lead">Три вопроса — и подборка вин из каталога «Своё Вино» с объяснением, почему они подходят.</p>
+      <div class="chat" id="chat" aria-live="polite"></div>
+      <div class="chips" id="answers" role="group" aria-label="Варианты ответа"></div>
+      <div class="picks" id="picks"></div>
+      <div class="save-row" id="somm-actions" hidden>
+        <button id="somm-more" class="btn btn-secondary" type="button">Ещё варианты</button>
+        <button id="somm-restart" class="btn-ghost" type="button">Начать заново</button>
+      </div>
     </section>
 
     <section id="diary-section" aria-labelledby="diary-title" hidden>
@@ -293,7 +337,7 @@
     const diaryKey = 'svoe-vino-diary-v1';
     const DISHES = [['fish', 'Рыба'], ['seafood', 'Морепродукты'], ['poultry', 'Птица'], ['red_meat', 'Красное мясо'],
       ['vegetables', 'Овощи'], ['cheese', 'Сыр'], ['dessert', 'Десерт'], ['spicy', 'Острое']];
-    let current = null, recognized = null, rating = 0, previewUrl = null;
+    let current = null, recognized = null, rating = 0, previewUrl = null, lastVerdict = null;
     const cardCache = new Map();
     const thumb = slug => `/v1/wines/${encodeURIComponent(slug)}/thumbnail`;
 
@@ -309,11 +353,12 @@
     function updateCount() { $('diary-count').textContent = Object.keys(saved()).length; }
 
     function showScreen(which) {
-      const diary = which === 'diary';
-      $('scan-section').hidden = diary; $('diary-section').hidden = !diary;
-      $('diary-tab').toggleAttribute('aria-current', diary); if (diary) $('diary-tab').setAttribute('aria-current', 'page');
-      $('dock').hidden = diary || $('result').hidden;
-      if (diary) renderDiary();
+      for (const [name, id] of [['scan', 'scan-section'], ['diary', 'diary-section'], ['somm', 'somm-section']]) $(id).hidden = name !== which;
+      for (const [name, id] of [['diary', 'diary-tab'], ['somm', 'somm-tab']]) {
+        if (name === which) $(id).setAttribute('aria-current', 'page'); else $(id).removeAttribute('aria-current');
+      }
+      $('dock').hidden = which !== 'scan' || $('result').hidden;
+      if (which === 'diary') renderDiary();
       window.scrollTo({ top: 0 });
     }
     function resetScan() {
@@ -357,25 +402,27 @@
         box.insertBefore(more, body.nextSibling);
       }
     }
-    function renderMatch(probability, isRecognized) {
+    const SOURCE_LABELS = { alt: 'Выбрано вами', analog: 'Похожее вино другой винодельни', sommelier: 'Совет сомелье', diary: 'Из вашего дневника' };
+    function renderMatch(probability, source) {
       const box = $('match');
-      if (!isRecognized) { box.className = 'match'; $('match-text').textContent = recognized ? 'Выбрано вами' : 'Из вашего дневника'; return; }
+      if (source !== 'scan') { box.className = 'match'; $('match-text').textContent = SOURCE_LABELS[source]; return; }
       const unsure = probability < 0.7;
       box.className = 'match' + (unsure ? ' unsure' : '');
       $('match-text').textContent = unsure ? `Похоже на это вино · ${Math.round(probability * 100)}%`
                                            : `Найдено в каталоге · совпадение ${Math.round(probability * 100)}%`;
     }
 
-    function showWine(card, probability = null) {
+    function showWine(card, probability = null, source = 'scan') {
       current = card;
+      if (source !== 'scan' && source !== 'alt') $('alts-section').hidden = true;
       $('uploader').hidden = true; $('result').hidden = false; $('dock').hidden = false; setStatus('');
       $('wine-name').textContent = card.name; $('wine-winery').textContent = card.winery;
       const image = $('wine-image'); image.alt = `Бутылка: ${card.name}`;
       image.src = thumb(card.slug);
-      renderMatch(probability ?? 1, recognized && card.slug === recognized.slug);
+      renderMatch(probability ?? 1, source === 'scan' && recognized && card.slug !== recognized.slug ? 'alt' : source);
       renderFacts(card); renderDescription(card.description);
       document.querySelectorAll('.alt').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.slug === card.slug)));
-      $('pairing-answer').hidden = true; renderDishes(); loadPairings(card.slug);
+      $('pairing-answer').hidden = true; renderDishes(); loadPairings(card.slug); loadAnalogues(card.slug);
       const entry = saved()[card.slug];
       rating = entry?.rating || 0; renderStars();
       $('diary-note').value = entry?.note || ''; $('save-status').textContent = entry ? 'Уже в дневнике' : '';
@@ -401,9 +448,87 @@
           title.textContent = card.name;
           meta.textContent = [card.sweetness || card.category, `${Math.round((item.probability || 0) * 100)}%`].filter(Boolean).join(' · ');
           button.setAttribute('aria-label', `${card.name}, ${card.winery}`);
-          button.addEventListener('click', () => showWine(card, item.probability));
+          button.addEventListener('click', () => showWine(card, item.probability, 'alt'));
         } catch (_) { button.remove(); }
       }
+    }
+
+    async function loadAnalogues(slug) {
+      const list = $('analogs'); list.replaceChildren(); $('analog-section').hidden = true;
+      const unsure = recognized && recognized.slug === slug && lastVerdict === 'check_alternatives';
+      $('analog-title').textContent = unsure ? 'Если вашего вина нет в каталоге — похожие по стилю' : 'Похожие вина других виноделен';
+      try {
+        const response = await fetch(`/v1/wines/${encodeURIComponent(slug)}/analogues?limit=4`);
+        if (!response.ok) return;
+        const data = await response.json();
+        if (!current || current.slug !== slug || !data.analogues.length) return;
+        for (const item of data.analogues) {
+          const button = el('button', { type: 'button', className: 'alt', ariaLabel: `${item.card.name}, ${item.card.winery}` });
+          button.append(el('div', { className: 'thumb' }, el('img', { src: thumb(item.slug), alt: '', loading: 'lazy' })),
+            el('div', { className: 'meta' }, el('strong', { textContent: item.card.name }), el('span', { textContent: item.card.winery }),
+              ...item.reasons.slice(0, 2).map(reason => el('span', { className: 'why', textContent: reason }))));
+          button.addEventListener('click', () => { cardCache.set(item.slug, item.card); showWine(item.card, null, 'analog'); });
+          list.append(button);
+        }
+        $('analog-section').hidden = false;
+      } catch (_) { /* Analogues are optional; the recognized wine stays visible. */ }
+    }
+
+    const QUESTIONS = [
+      { key: 'dish', text: 'К чему выбираем вино?', options: [...DISHES, [null, 'Без еды']] },
+      { key: 'color', text: 'Какое вино вам ближе?', options: [['red', 'Красное'], ['white', 'Белое'], ['rose', 'Розовое'], ['sparkling', 'Игристое'], [null, 'Не важно']] },
+      { key: 'sweetness', text: 'А по сладости?', options: [['dry', 'Сухое'], ['semi', 'Полусухое или полусладкое'], ['sweet', 'Сладкое'], [null, 'Не важно']] },
+    ];
+    const somm = { answers: {}, like: null, offset: 0 };
+    function bubble(text, me = false) { $('chat').append(el('div', { className: 'bubble' + (me ? ' me' : ''), textContent: text })); }
+    function startSommelier(likeCard = null) {
+      Object.assign(somm, { answers: {}, like: likeCard ? likeCard.slug : null, offset: 0 });
+      $('chat').replaceChildren(); $('picks').replaceChildren(); $('somm-actions').hidden = true;
+      showScreen('somm');
+      bubble(likeCard ? `Подберу вино в стиле «${likeCard.name}». Три коротких вопроса.` : 'Здравствуйте! Подберу вино из каталога за три вопроса.');
+      ask(0);
+    }
+    function ask(index) {
+      const question = QUESTIONS[index]; bubble(question.text);
+      const answers = $('answers'); answers.replaceChildren();
+      for (const [value, label] of question.options) {
+        const chip = el('button', { type: 'button', className: 'chip', textContent: label });
+        chip.addEventListener('click', () => {
+          answers.replaceChildren(); bubble(label, true); somm.answers[question.key] = value;
+          if (index + 1 < QUESTIONS.length) ask(index + 1); else { somm.offset = 0; fetchPicks(true); }
+        });
+        answers.append(chip);
+      }
+      if (index) answers.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+    async function fetchPicks(first) {
+      const params = new URLSearchParams({ offset: somm.offset });
+      for (const [key, value] of Object.entries(somm.answers)) if (value) params.set(key, value);
+      if (somm.like) params.set('like', somm.like);
+      try {
+        const response = await fetch(`/v1/sommelier?${params}`);
+        if (!response.ok) throw new Error();
+        const data = await response.json();
+        if (first) bubble(data.total ? `Нашёл ${data.total} ${plural(data.total, 'вино', 'вина', 'вин')} разных виноделен. Вот лучшие:` :
+                                      'Под такие ответы в каталоге ничего не нашлось. Попробуйте ответить «Не важно» на один из вопросов.');
+        const list = $('picks'); list.replaceChildren();
+        for (const item of data.picks) {
+          const button = el('button', { type: 'button', className: 'card pick' });
+          button.append(el('div', { className: 'thumb' }, el('img', { src: thumb(item.slug), alt: '', loading: 'lazy' })),
+            el('div', {}, el('h3', { textContent: item.card.name }),
+              el('p', { className: 'muted', textContent: [item.card.winery, item.card.category, item.card.region].filter(Boolean).join(' · ') }),
+              el('div', { className: 'tags' }, ...item.reasons.map(reason => el('span', { className: 'tag', textContent: reason })))));
+          button.addEventListener('click', () => { cardCache.set(item.slug, item.card); showScreen('scan'); showWine(item.card, null, 'sommelier'); });
+          list.append(button);
+        }
+        $('somm-actions').hidden = !data.total;
+        $('somm-more').hidden = somm.offset + data.picks.length >= data.total;
+        if (!first) list.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } catch (_) { bubble('Не удалось получить подборку. Попробуйте ещё раз.'); }
+    }
+    function plural(n, one, few, many) {
+      const mod10 = n % 10, mod100 = n % 100;
+      return mod10 === 1 && mod100 !== 11 ? one : mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14) ? few : many;
     }
 
     function renderDishes() {
@@ -465,7 +590,7 @@
         const response = await fetch('/v1/predict', { method: 'POST', body });
         if (!response.ok) throw new Error(response.status === 413 ? 'Фото больше 16 МБ. Попробуйте другое.' : 'Не удалось распознать фото. Попробуйте снять ещё раз.');
         const prediction = await response.json();
-        recognized = prediction.card; cardCache.set(prediction.slug, prediction.card);
+        recognized = prediction.card; lastVerdict = prediction.verdict; cardCache.set(prediction.slug, prediction.card);
         showWine(prediction.card, prediction.confidence);
         renderAlternatives(prediction);
       } catch (error) {
@@ -498,7 +623,7 @@
       }
       for (const entry of entries) {
         const open = el('button', { type: 'button', className: 'btn-ghost', textContent: 'Открыть' });
-        open.addEventListener('click', () => { recognized = null; showScreen('scan'); $('alts-section').hidden = true; showWine(entry.card); });
+        open.addEventListener('click', () => { showScreen('scan'); showWine(entry.card, null, 'diary'); });
         const remove = el('button', { type: 'button', className: 'btn-ghost', textContent: 'Удалить' });
         remove.addEventListener('click', () => {
           const all = saved(); delete all[entry.card.slug];
@@ -519,6 +644,11 @@
     $('rescan-top').addEventListener('click', resetScan);
     $('home-link').addEventListener('click', resetScan);
     $('diary-tab').addEventListener('click', () => showScreen($('diary-section').hidden ? 'diary' : 'scan'));
+    $('somm-tab').addEventListener('click', () => $('somm-section').hidden ? startSommelier() : showScreen('scan'));
+    $('somm-intro').addEventListener('click', () => startSommelier());
+    $('somm-from-wine').addEventListener('click', () => current && startSommelier(current));
+    $('somm-restart').addEventListener('click', () => startSommelier(somm.like ? cardCache.get(somm.like) || null : null));
+    $('somm-more').addEventListener('click', () => { somm.offset += 3; fetchPicks(false); });
     updateCount();
   </script>
 </body>

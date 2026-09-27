@@ -21,6 +21,7 @@ from .image import decode_image, query_views
 from .ocr import (MODEL_DIR as DEFAULT_OCR_MODEL_DIR, OCRReader, OCRReranker,
                   OCR_WEIGHT, VISUAL_MARGIN_FOR_OCR)
 from .pairing import recommend_pairings
+from .recommend import Recommender
 from .verifier import (CANDIDATES, DEFAULT_MODEL_DIR as DEFAULT_VERIFIER_DIR,
                        DEFAULT_THUMBNAIL_DIR, reference_thumbnail, sweetness)
 from .vision import (DEFAULT_INDEX, DEFAULT_MANIFEST, DEFAULT_MODEL_DIR,
@@ -49,6 +50,7 @@ class SearchEngine:
             # Near-duplicate cards often differ only in sweetness; show it to the user too.
             found = sweetness(card)
             card["sweetness"] = None if found == "не указана" else found
+        self.recommender = Recommender(self.cards)
         self.images_dir = images_dir
         self.gallery = load_index(index_path, manifest_path)
         index_metadata = json.loads(index_path.with_suffix(".json").read_text())
@@ -204,6 +206,22 @@ def create_app(engine: SearchEngine | None = None) -> FastAPI:
             raise HTTPException(status_code=404, detail="Unknown slug")
         try:
             return recommend_pairings(card, dish)
+        except ValueError as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
+
+    @app.get("/v1/wines/{slug}/analogues")
+    def get_analogues(slug: str, limit: int = 4):
+        if app.state.engine.get_card(slug) is None:
+            raise HTTPException(status_code=404, detail="Unknown slug")
+        return {"slug": slug, "analogues": app.state.engine.recommender.analogues(slug, max(1, min(limit, 8)))}
+
+    @app.get("/v1/sommelier")
+    def sommelier(dish: str | None = None, color: str | None = None, sweetness: str | None = None,
+                  like: str | None = None, offset: int = 0):
+        try:
+            return app.state.engine.recommender.sommelier(
+                dish=dish or None, color=color or None, sweetness=sweetness or None,
+                like=like or None, offset=max(0, offset))
         except ValueError as error:
             raise HTTPException(status_code=422, detail=str(error)) from error
 
