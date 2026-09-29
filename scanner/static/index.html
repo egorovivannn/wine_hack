@@ -129,6 +129,13 @@
     .alt .meta { padding: 8px 10px 10px; font-size: 13px; line-height: 1.3; }
     .alt .meta strong { display: block; font-size: 14px; margin-bottom: 2px; }
     .alt .meta span { color: var(--muted); }
+    /* When the scanner is unsure, the shopper photo sits right above the alternatives. */
+    .compare { display: grid; grid-template-columns: minmax(0, 260px) 1fr; gap: 16px; align-items: center; margin: 0 0 14px;
+      background: var(--cream); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px; }
+    .compare img { width: 100%; max-height: 300px; object-fit: contain; border-radius: 10px; background: #fff; }
+    .compare strong { display: block; font-size: 15px; margin-bottom: 4px; }
+    .compare span { color: var(--muted); font-size: 14px; }
+    @media (max-width: 560px) { .compare { grid-template-columns: 1fr; } .compare img { max-height: 260px; } }
 
     .pairings { display: grid; gap: 8px; margin: 12px 0 16px; }
     .pairing { display: grid; grid-template-columns: 36px 1fr; gap: 10px; align-items: start; background: var(--cream);
@@ -163,6 +170,8 @@
     .entry { display: grid; grid-template-columns: 76px 1fr; gap: 14px; padding: 14px; }
     .entry .thumb { background: #fff; border: 1px solid var(--line); border-radius: 10px; display: grid; place-items: center; height: 104px; }
     .entry img { max-height: 96px; max-width: 90%; object-fit: contain; }
+    .entry .thumb.mine { overflow: hidden; }
+    .entry .thumb.mine img { width: 100%; height: 100%; max-width: none; max-height: none; object-fit: cover; }
     .entry h3 { font-size: 18px; margin: 0; }
     .entry .note { margin: 6px 0; white-space: pre-wrap; }
     .entry .row { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; margin-top: 6px; }
@@ -283,6 +292,10 @@
               <span>Этикетки этой серии очень похожи. Если на бутылке другое название или сладость — выберите своё вино ниже.</span>
             </div>
             <h3 id="alts-title">Не то вино?</h3>
+            <figure id="compare" class="compare" hidden>
+              <img id="compare-img" alt="Ваше фото этикетки">
+              <figcaption><strong>Ваше фото</strong><span>Сравните этикетку с вариантами ниже: название, сорт и сладость.</span></figcaption>
+            </figure>
             <div id="alts" class="alts"></div>
           </section>
 
@@ -349,6 +362,8 @@
     const DISHES = [['fish', 'Рыба'], ['seafood', 'Морепродукты'], ['poultry', 'Птица'], ['red_meat', 'Красное мясо'],
       ['vegetables', 'Овощи'], ['cheese', 'Сыр'], ['dessert', 'Десерт'], ['spicy', 'Острое']];
     let current = null, recognized = null, rating = 0, previewUrl = null, lastVerdict = null;
+    // compareMode: the scan was not confident, so the shopper photo is shown large next to the alternatives.
+    let scanFile = null, compareMode = false, photoFromScan = false;
     const cardCache = new Map();
     const thumb = slug => `/v1/wines/${encodeURIComponent(slug)}/thumbnail`;
 
@@ -430,9 +445,12 @@
       $('wine-name').textContent = card.name; $('wine-winery').textContent = card.winery;
       const image = $('wine-image'); image.alt = `Бутылка: ${card.name}`;
       image.src = thumb(card.slug);
+      const fromScan = (source === 'scan' || source === 'alt') && Boolean(previewUrl);
+      const photo = fromScan ? previewUrl : source === 'diary' ? saved()[card.slug]?.photo || null : null;
+      photoFromScan = fromScan;
       const mine = $('your-photo'); mine.classList.remove('big');
-      mine.hidden = !(previewUrl && (source === 'scan' || source === 'alt'));
-      if (!mine.hidden) $('your-photo-img').src = previewUrl;
+      mine.hidden = !photo || (fromScan && compareMode);
+      if (!mine.hidden) $('your-photo-img').src = photo;
       renderMatch(probability ?? 1, source === 'scan' && recognized && card.slug !== recognized.slug ? 'alt' : source);
       renderFacts(card); renderDescription(card.description);
       document.querySelectorAll('.alt').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.slug === card.slug)));
@@ -449,6 +467,8 @@
       const others = (prediction.top5 || []).filter(item => item.slug !== prediction.slug).slice(0, 4);
       $('alts-section').hidden = !others.length;
       $('unsure-note').hidden = prediction.verdict !== 'check_alternatives';
+      $('compare').hidden = !(compareMode && previewUrl);
+      if (compareMode && previewUrl) $('compare-img').src = previewUrl;
       const all = [{ slug: prediction.slug, probability: prediction.confidence, card: prediction.card }, ...others];
       for (const item of all) {
         const button = el('button', { type: 'button', className: 'alt' });
@@ -597,7 +617,7 @@
     async function scan(file) {
       if (!file) return;
       if (previewUrl) URL.revokeObjectURL(previewUrl);
-      previewUrl = URL.createObjectURL(file);
+      previewUrl = URL.createObjectURL(file); scanFile = file; compareMode = false;
       $('preview').src = previewUrl; $('preview').hidden = false; $('frame-art').hidden = true; $('scanning').hidden = false;
       setStatus('');
       try {
@@ -606,6 +626,7 @@
         if (!response.ok) throw new Error(response.status === 413 ? 'Фото больше 16 МБ. Попробуйте другое.' : 'Не удалось распознать фото. Попробуйте снять ещё раз.');
         const prediction = await response.json();
         recognized = prediction.card; lastVerdict = prediction.verdict; cardCache.set(prediction.slug, prediction.card);
+        compareMode = (prediction.confidence ?? 0) < 0.9;
         showWine(prediction.card, prediction.confidence);
         renderAlternatives(prediction);
       } catch (error) {
@@ -616,12 +637,24 @@
     $('image-input').addEventListener('change', event => scan(event.target.files[0]));
     $('scan-form').addEventListener('submit', event => { event.preventDefault(); scan($('image-input').files[0]); });
 
-    $('save').addEventListener('click', () => {
-      if (!current) return;
+    async function photoThumb(file, side = 480) {
+      // A small JPEG copy for the diary: localStorage is limited, the original photo can be several megabytes.
       try {
-        const entries = saved();
-        entries[current.slug] = { card: current, note: $('diary-note').value.trim(), rating, savedAt: new Date().toISOString() };
-        localStorage.setItem(diaryKey, JSON.stringify(entries));
+        const bitmap = await createImageBitmap(file);
+        const k = Math.min(1, side / Math.max(bitmap.width, bitmap.height));
+        const canvas = el('canvas', { width: Math.round(bitmap.width * k), height: Math.round(bitmap.height * k) });
+        canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+        return canvas.toDataURL('image/jpeg', 0.8);
+      } catch (_) { return null; }
+    }
+    $('save').addEventListener('click', async () => {
+      if (!current) return;
+      const card = current, entries = saved();
+      const photo = (photoFromScan && scanFile ? await photoThumb(scanFile) : null) || entries[card.slug]?.photo || null;
+      const entry = { card, note: $('diary-note').value.trim(), rating, savedAt: new Date().toISOString() };
+      const store = value => { entries[card.slug] = value; localStorage.setItem(diaryKey, JSON.stringify(entries)); };
+      try {
+        try { store(photo ? { ...entry, photo } : entry); } catch (_) { store(entry); }  // storage full: keep the rating without the photo
         $('save-status').textContent = 'Сохранено ✓'; $('save-status').className = 'saved-ok'; updateCount();
       } catch (_) { $('save-status').textContent = 'Не удалось сохранить в этом браузере.'; $('save-status').className = ''; }
     });
@@ -648,7 +681,8 @@
         const stars = entry.rating ? el('span', { className: 'mini-stars', textContent: '★'.repeat(entry.rating) + '☆'.repeat(5 - entry.rating), ariaLabel: `Оценка ${entry.rating} из 5` }) : null;
         const date = new Date(entry.savedAt).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
         list.append(el('article', { className: 'card entry' },
-          el('div', { className: 'thumb' }, el('img', { src: thumb(entry.card.slug), alt: '', loading: 'lazy' })),
+          el('div', { className: entry.photo ? 'thumb mine' : 'thumb' },
+            el('img', { src: entry.photo || thumb(entry.card.slug), alt: entry.photo ? 'Ваше фото' : '', loading: 'lazy' })),
           el('div', {}, el('h3', { textContent: entry.card.name }), el('p', { className: 'muted', textContent: `${entry.card.winery} · ${date}` }),
             stars, entry.note ? el('p', { className: 'note', textContent: entry.note }) : null,
             el('div', { className: 'row' }, open, remove))));
