@@ -92,6 +92,14 @@
     .wine-top { display: grid; gap: 0; }
     .bottle { background: #fff; border-bottom: 1px solid var(--line); display: grid; place-items: center; padding: 20px; min-height: 280px; }
     .bottle img { max-width: 100%; max-height: 320px; object-fit: contain; }
+    /* The shopper's own photo next to the catalogue bottle, to compare labels at a glance. */
+    .bottle { position: relative; }
+    .your-photo { position: absolute; left: 12px; bottom: 12px; width: 96px; margin: 0; padding: 4px 4px 2px; background: #fff;
+      border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow); cursor: zoom-in; transition: width .2s; }
+    .your-photo img { display: block; width: 100%; height: 96px; max-height: none; object-fit: cover; border-radius: 7px; }
+    .your-photo.big { width: calc(100% - 24px); cursor: zoom-out; z-index: 2; }
+    .your-photo.big img { height: auto; max-height: 360px; object-fit: contain; }
+    .your-photo figcaption { font-size: 11px; color: var(--muted); text-align: center; padding: 3px 0 1px; }
     .wine-info { padding: 20px; }
     .match { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 650; padding: 6px 12px; border-radius: 999px;
       background: var(--ok-soft); color: var(--ok); margin-bottom: 12px; }
@@ -256,7 +264,10 @@
         </div>
         <div class="card wine-card">
           <div class="wine-top">
-            <div class="bottle"><img id="wine-image" alt=""></div>
+            <div class="bottle"><img id="wine-image" alt="">
+              <figure id="your-photo" class="your-photo" role="button" tabindex="0" title="Нажмите, чтобы увеличить" hidden>
+                <img id="your-photo-img" alt="Ваше фото этикетки"><figcaption>Ваше фото</figcaption>
+              </figure></div>
             <div class="wine-info">
               <div id="match" class="match"><span class="dot" aria-hidden="true"></span><span id="match-text"></span></div>
               <h2 id="wine-name"></h2>
@@ -419,6 +430,9 @@
       $('wine-name').textContent = card.name; $('wine-winery').textContent = card.winery;
       const image = $('wine-image'); image.alt = `Бутылка: ${card.name}`;
       image.src = thumb(card.slug);
+      const mine = $('your-photo'); mine.classList.remove('big');
+      mine.hidden = !(previewUrl && (source === 'scan' || source === 'alt'));
+      if (!mine.hidden) $('your-photo-img').src = previewUrl;
       renderMatch(probability ?? 1, source === 'scan' && recognized && card.slug !== recognized.slug ? 'alt' : source);
       renderFacts(card); renderDescription(card.description);
       document.querySelectorAll('.alt').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.slug === card.slug)));
@@ -641,6 +655,10 @@
       }
     }
 
+    $('your-photo').addEventListener('click', () => $('your-photo').classList.toggle('big'));
+    $('your-photo').addEventListener('keydown', event => {
+      if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); $('your-photo').classList.toggle('big'); }
+    });
     $('rescan').addEventListener('click', resetScan);
     $('rescan-top').addEventListener('click', resetScan);
     $('home-link').addEventListener('click', resetScan);
