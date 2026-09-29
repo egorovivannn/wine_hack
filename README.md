@@ -35,6 +35,30 @@
 
 Подробно, со всеми эндпоинтами — в [docs/FEATURES_AND_API.md](docs/FEATURES_AND_API.md).
 
+## Стек
+
+| Слой | Технологии |
+|---|---|
+| Визуальный поиск | SigLIP 2 (`google/siglip2-base-patch16-384`), точный перебор по 2 089 эталонам на NumPy |
+| Проверка этикетки | Qwen3.5-4B (`Qwen/Qwen3.5-4B`), 4 бита через bitsandbytes |
+| ML-окружение | Python 3.12, PyTorch 2.11 (CUDA 12.8), Transformers 5.17, Pillow + pi-heif (HEIC) |
+| API | FastAPI + Uvicorn |
+| Интерфейс | одна статическая страница HTML/CSS/JS без фреймворков, дневник в `localStorage` |
+| Сборка и запуск | uv с `uv.lock`, Docker на `nvidia/cuda:12.8.1` |
+
+Все модели скачиваются с Hugging Face по закреплённым ревизиям и проверяются по SHA-256; внешних API нет.
+
+## API
+
+| Метод | Что делает |
+|---|---|
+| `POST /v1/eval/predict` | контракт организатора: фото в поле `image` → `{"slug": ...}` |
+| `POST /v1/predict` | карточка, уверенность, top-5 и альтернативы |
+| `GET /v1/wines/{slug}/analogues`, `GET /v1/sommelier` | похожие вина и цифровой сомелье |
+| `GET /health` | готовность сервиса |
+
+Все эндпоинты и поля ответа — в [docs/FEATURES_AND_API.md](docs/FEATURES_AND_API.md).
+
 ## Установка и запуск
 
 Требуются Python 3.12, [uv](https://docs.astral.sh/uv/getting-started/installation/), драйвер NVIDIA с поддержкой CUDA 12.8 (570+), GPU от 8 GiB, `7z`, около 15 GiB для архивов, эталонов и весов. `pyproject.toml` и `uv.lock` фиксируют зависимости для Linux x86-64: torch 2.11 (cu128), transformers 5.17, bitsandbytes 0.50. Команды ниже выполняются из корня репозитория. Обязателен только архив организаторов `data/source/Датасет.zip`. `data/source/official_real_photos.zip` нужен лишь для оценки на размеченных фото, `data/field/real_photos.zip` (личные магазинные фото) — только для локальной проверки; если их нет, подготовка пропускает эти шаги.
