@@ -20,6 +20,8 @@ SOURCE_HASHES = {
     "source/official_real_photos.zip": "5ffa77f7c8fdc82e1f9aa123ded91cdb2df435b7e3990ce074cba53b6be0e4c9",
     "field/real_photos.zip": "f24f4c47a0aa43ba7a541963298e9a949516949bc428e3e21c1eb2101c40947b",
 }
+# Photo archives are only needed to evaluate on labelled photos; the service needs just Датасет.zip.
+OPTIONAL_SOURCES = {"source/official_real_photos.zip", "field/real_photos.zip"}
 EXPECTED_CSV_SHA256 = "7b219c23afbeba1e03c6297d0b8098ca8560bb6af53df13ebcbb7f46e6dbbb2b"
 EXPECTED_MANIFEST_SHA256 = "5654d67ef71dfd3462aad1a00d949f5f5465a4c30f63667b95f388d68289a21d"
 VOLUME_NAMES = [f"prod-svoe-vino-strapi.part{part}.rar" for part in (1, 2, 3)]
@@ -98,6 +100,9 @@ def prepare(data_dir: Path, csv_path: Path, verify_only: bool = False) -> dict:
         raise ValueError("df_2.csv differs from the pinned catalog")
     for relative, expected in SOURCE_HASHES.items():
         path = data_dir / relative
+        if relative in OPTIONAL_SOURCES and not path.exists():
+            print(f"Skipping optional {relative}: not found (only needed for evaluation on photos)")
+            continue
         if sha256_file(path) != expected:
             raise ValueError(f"Source archive hash differs: {path}")
     images_dir = data_dir / "competition_imgs"
@@ -132,12 +137,12 @@ def prepare(data_dir: Path, csv_path: Path, verify_only: bool = False) -> dict:
                 if Path(name).is_absolute() or ".." in Path(name).parts:
                     raise ValueError(f"Unsafe evaluator file path: {name}")
                 _copy_member(archive, info, data_dir / "source/eval" / name)
-    _extract_photos(data_dir / "source/official_real_photos.zip",
-                    data_dir / "official_real_photos", prefix="", expected_count=100,
-                    verify_only=verify_only)
-    _extract_photos(data_dir / "field/real_photos.zip",
-                    data_dir / "field/photos", prefix="real_test/", expected_count=13,
-                    verify_only=verify_only)
+    for archive, destination, prefix, count in (
+            ("source/official_real_photos.zip", "official_real_photos", "", 100),
+            ("field/real_photos.zip", "field/photos", "real_test/", 13)):
+        if (data_dir / archive).exists():
+            _extract_photos(data_dir / archive, data_dir / destination, prefix=prefix,
+                            expected_count=count, verify_only=verify_only)
     if not _reference_files_match(manifest_path, images_dir, filenames):
         raise ValueError("Catalog references do not match their manifest")
     digest = sha256_file(manifest_path)

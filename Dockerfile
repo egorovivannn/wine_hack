@@ -1,5 +1,5 @@
-# Runtime image for the scanner API. Data, weights and the index are mounted from ./data;
-# prepare them on the host with the commands in README.md.
+# Scanner image. Mount ./data with the organizers' archive at data/source/Датасет.zip: on the first start
+# the container prepares the catalogue, downloads the pinned models and builds the index there, then serves.
 FROM nvidia/cuda:12.8.1-cudnn-runtime-ubuntu24.04
 
 ENV DEBIAN_FRONTEND=noninteractive \
@@ -10,7 +10,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONUNBUFFERED=1
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends python3.12 python3.12-venv ca-certificates libgl1 libglib2.0-0 \
+    && apt-get install -y --no-install-recommends python3.12 python3.12-venv ca-certificates libgl1 libglib2.0-0 7zip 7zip-rar \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=ghcr.io/astral-sh/uv:0.8.22 /uv /usr/local/bin/uv
 
@@ -24,6 +24,8 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     done; exit 1
 COPY scanner ./scanner
 COPY df_2.csv ./
+COPY evaluation/manifests ./evaluation/manifests
+COPY docker/entrypoint.sh /usr/local/bin/wine-entrypoint
 
 EXPOSE 8088
-CMD ["uv", "run", "--locked", "--no-sync", "uvicorn", "scanner.server:app", "--host", "0.0.0.0", "--port", "8088", "--workers", "1"]
+CMD ["wine-entrypoint"]

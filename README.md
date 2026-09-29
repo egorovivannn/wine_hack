@@ -37,7 +37,7 @@
 
 ## Установка и запуск
 
-Требуются Python 3.12, [uv](https://docs.astral.sh/uv/getting-started/installation/), драйвер NVIDIA с поддержкой CUDA 12.8 (570+), GPU от 8 GiB, `7z`, около 15 GiB для архивов, эталонов и весов. `pyproject.toml` и `uv.lock` фиксируют зависимости для Linux x86-64: torch 2.11 (cu128), transformers 5.17, bitsandbytes 0.50. Команды ниже выполняются из корня репозитория. Исходные файлы положите в `data/source/Датасет.zip`, `data/source/official_real_photos.zip` и `data/field/real_photos.zip`. Последний архив содержит личные магазинные фото и нужен только для локальной проверки.
+Требуются Python 3.12, [uv](https://docs.astral.sh/uv/getting-started/installation/), драйвер NVIDIA с поддержкой CUDA 12.8 (570+), GPU от 8 GiB, `7z`, около 15 GiB для архивов, эталонов и весов. `pyproject.toml` и `uv.lock` фиксируют зависимости для Linux x86-64: torch 2.11 (cu128), transformers 5.17, bitsandbytes 0.50. Команды ниже выполняются из корня репозитория. Обязателен только архив организаторов `data/source/Датасет.zip`. `data/source/official_real_photos.zip` нужен лишь для оценки на размеченных фото, `data/field/real_photos.zip` (личные магазинные фото) — только для локальной проверки; если их нет, подготовка пропускает эти шаги.
 
 ```bash
 sudo apt-get install -y 7zip 7zip-rar jq
@@ -64,7 +64,7 @@ uv run --locked python -m scanner.evaluate --images-dir data/official_real_photo
   --labels evaluation/official_labels_v2.tsv --output data/evaluation/v2_verifier.jsonl --use-verifier
 ```
 
-**Docker.** Образ содержит окружение и код сервиса; данные, веса и индекс (`data/`) готовятся на хосте командами выше и монтируются в контейнер. Нужны Docker и [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html); образ занимает около 20 GB. Проверено 29 сентября 2026 на Ubuntu 24.04 (WSL2) с RTX 3080: сборка из чистого клона, запуск с `--gpus all`, скрипт организатора получил ответы на все три контрольных фото, проверка этикетки Qwen работает внутри контейнера.
+**Docker — сквозной запуск.** Положите архив организаторов в `data/source/Датасет.zip` и выполните две команды ниже. При первом запуске контейнер сам подготовит каталог, скачает закреплённые модели (около 10 GB) и соберёт индекс в подключённой папке `data/` — примерно 20 минут; следующие запуски сразу поднимают сервис на `http://127.0.0.1:8088/`. Нужны Docker и [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html); образ занимает около 20 GB. Проверено 29 сентября 2026 на Ubuntu 24.04 (WSL2) с RTX 3080: чистый клон, пустая папка `data/` только с `Датасет.zip`, запуск с `--gpus all`, скрипт организатора получил ответы на все три контрольных фото.
 
 ```bash
 docker build -t wine-scanner .
@@ -106,7 +106,7 @@ bash evaluation/organizer/participant_test.sh --images-dir data/source/eval/quer
 - **Одна бутылка в центре.** Снимок должен показывать целевую бутылку ближе к центру; для кадров с несколькими бутылками нужно отдельное правило оценки.
 - **Общие эталоны.** 9 эталонных изображений привязаны сразу к двум `slug`, по картинке их не различить.
 - **CPU.** Без видеокарты проверка этикетки отключена (иначе около минуты на фото), точность визуального режима ниже.
-- **Docker.** Данные и модели в образ не входят: `data/` готовится на хосте и монтируется.
+- **Docker.** Данные и модели в образ не входят: при первом запуске контейнер готовит их в подключённой папке `data/`, для этого нужен интернет.
 
 ## Документация
 
