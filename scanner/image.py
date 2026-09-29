@@ -6,6 +6,10 @@ from io import BytesIO
 from pathlib import Path
 
 from PIL import Image, ImageChops, ImageOps
+from pi_heif import register_heif_opener
+
+# iPhone photos often arrive as HEIC; without this Pillow cannot open them.
+register_heif_opener()
 
 
 SIDE = 384

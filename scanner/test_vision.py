@@ -31,6 +31,10 @@ class VisionTests(unittest.TestCase):
         self.assertAlmostEqual(found[0].score, 1.0)
         self.assertAlmostEqual(found[1].score, 0.5)
 
+    def test_heic_decoder_is_registered(self):
+        from PIL import Image
+        self.assertEqual(Image.registered_extensions().get(".heic"), "HEIF")
+
     def test_bytes_are_decoded_by_content_and_alpha_is_composited(self):
         image = Image.new("RGBA", (20, 40), (255, 0, 0, 0))
         image.putpixel((10, 20), (0, 0, 255, 255))

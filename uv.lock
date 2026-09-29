@@ -1240,6 +1240,7 @@ dependencies = [
     { name = "numpy" },
     { name = "opencv-python-headless" },
     { name = "pandas" },
+    { name = "pi-heif" },
     { name = "pillow" },
     { name = "python-multipart" },
     { name = "rapidfuzz" },
@@ -1258,7 +1259,6 @@ audit = [
     { name = "httpx", extra = ["socks"] },
 ]
 train = [
-    { name = "pi-heif" },
     { name = "ultralytics" },
 ]
 
@@ -1273,6 +1273,7 @@ requires-dist = [
     { name = "numpy", specifier = "==2.2.4" },
     { name = "opencv-python-headless", specifier = "==5.0.0.93" },
     { name = "pandas", specifier = "==2.2.3" },
+    { name = "pi-heif", specifier = "==1.4.0" },
     { name = "pillow", specifier = "==11.1.0" },
     { name = "python-multipart", specifier = "==0.0.20" },
     { name = "rapidfuzz", specifier = "==3.14.3" },
@@ -1288,7 +1289,4 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 audit = [{ name = "httpx", extras = ["socks"], specifier = "==0.28.1" }]
-train = [
-    { name = "pi-heif", specifier = "==1.4.0" },
-    { name = "ultralytics", specifier = ">=8.4,<8.5" },
-]
+train = [{ name = "ultralytics", specifier = ">=8.4,<8.5" }]

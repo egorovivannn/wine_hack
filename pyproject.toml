@@ -13,6 +13,7 @@ dependencies = [
     "numpy==2.2.4",
     "opencv-python-headless==5.0.0.93",
     "pandas==2.2.3",
+    "pi-heif==1.4.0",
     "pillow==11.1.0",
     "python-multipart==0.0.20",
     "rapidfuzz==3.14.3",
@@ -45,6 +46,5 @@ audit = [
     "httpx[socks]==0.28.1",
 ]
 train = [
-    "pi-heif==1.4.0",
     "ultralytics>=8.4,<8.5",
 ]
