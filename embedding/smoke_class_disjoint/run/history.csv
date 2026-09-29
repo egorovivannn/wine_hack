@@ -1,2 +1,0 @@
-epoch,train_loss,val_loss,queries,gallery_images,gallery_coverage,Recall@1,macro_Recall@1,Recall@5,macro_Recall@5,backbone_lr,head_lr,seconds,amp_skipped_updates,peak_gpu_gib
-1,2.073550057411194,0.5694907307624817,60,60,1.0,0.9833333333333333,0.9833333333333332,1.0,1.0,5.000000000000001e-07,5e-06,16.14818944599756,0,10.216120719909668

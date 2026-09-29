@@ -1,1 +1,0 @@
-"""Wine instance retrieval baseline."""

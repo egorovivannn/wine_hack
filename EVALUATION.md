@@ -75,7 +75,7 @@
 | SigLIP2-so400m вместо base | Top-5 лучше, Top-1 хуже | оставили base; отбор кандидатов и так 61/62 |
 | Добавить в эталоны другие полевые фото | 44/62 | совпадают по обстановке, а не по этикетке |
 | Вторые эталоны из дампа Strapi | без изменений | не усложняли индекс |
-| Детектор, адаптер и реранкер, обученные на внешних данных (WineSensed, GRAIN, Norwegian Grocery) | 39–44/59 против 51/59 | [`evaluation/TRAINED_CASCADE_2026-09-24.md`](evaluation/TRAINED_CASCADE_2026-09-24.md) |
+| Детектор, адаптер и реранкер, обученные на внешних данных (WineSensed, GRAIN, Norwegian Grocery) | 39–44/59 против 51/59 | [`evaluation/TRAINED_CASCADE_2026-09-24.md`](https://github.com/egorovivannn/wine_hack/blob/0c38987/evaluation/TRAINED_CASCADE_2026-09-24.md) |
 | EasyOCR-реранкер | 53/62 | заменён Qwen3.5-4B; сохранён как `WINE_OCR=1` |
 
 ## Воспроизведение
