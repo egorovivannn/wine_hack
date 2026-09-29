@@ -64,7 +64,7 @@ uv run --locked python -m scanner.evaluate --images-dir data/official_real_photo
   --labels evaluation/official_labels_v2.tsv --output data/evaluation/v2_verifier.jsonl --use-verifier
 ```
 
-`Dockerfile` содержит только окружение; `data/` готовится на хосте и монтируется. На проверочной машине образ пока не собирался:
+**Docker.** Образ содержит окружение и код сервиса; данные, веса и индекс (`data/`) готовятся на хосте командами выше и монтируются в контейнер. Нужны Docker и [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html); образ занимает около 20 GB. Проверено 29 сентября 2026 на Ubuntu 24.04 (WSL2) с RTX 3080: сборка из чистого клона, запуск с `--gpus all`, скрипт организатора получил ответы на все три контрольных фото, проверка этикетки Qwen работает внутри контейнера.
 
 ```bash
 docker build -t wine-scanner .
@@ -106,7 +106,7 @@ bash evaluation/organizer/participant_test.sh --images-dir data/source/eval/quer
 - **Одна бутылка в центре.** Снимок должен показывать целевую бутылку ближе к центру; для кадров с несколькими бутылками нужно отдельное правило оценки.
 - **Общие эталоны.** 9 эталонных изображений привязаны сразу к двум `slug`, по картинке их не различить.
 - **CPU.** Без видеокарты проверка этикетки отключена (иначе около минуты на фото), точность визуального режима ниже.
-- **Docker.** `Dockerfile` содержит только окружение и на проверочной машине не собирался.
+- **Docker.** Данные и модели в образ не входят: `data/` готовится на хосте и монтируется.
 
 ## Документация
 
