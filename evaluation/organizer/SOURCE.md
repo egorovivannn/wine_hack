@@ -1,0 +1,1 @@
+Скрипт `participant_test.sh` и `README.md` — без изменений из `eval.zip` в официальном датасете кейса. Скрипт отправляет каждое фото multipart-полем `image` на эндпоинт и пишет `predictions.jsonl` с `slug` и `latency_ms`. Тестовые фото в репозиторий не входят.
